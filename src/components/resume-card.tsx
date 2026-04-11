@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
@@ -18,6 +17,7 @@ interface ResumeCardProps {
 	period: string;
 	description?: readonly string[];
 }
+
 export const ResumeCard = ({
 	logoUrl,
 	altText,
@@ -31,10 +31,10 @@ export const ResumeCard = ({
 	return (
 		<Link
 			href={href || "#"}
-			target={`${href !== "" ? "_blank" : "_parent"}`}
+			target={href && href !== "#" ? "_blank" : "_self"}
 			className="block cursor-pointer"
 		>
-			<Card className="flex">
+			<Card className="flex transition-all duration-300 hover:shadow-md hover:border-foreground/20">
 				<div className="flex-none">
 					<Avatar className="border size-12 m-auto bg-muted-background dark:bg-foreground">
 						<AvatarImage
@@ -50,46 +50,43 @@ export const ResumeCard = ({
 						<div className="flex items-center justify-between gap-x-2 text-base">
 							<h3 className="inline-flex items-center justify-center font-semibold leading-none text-xs sm:text-sm">
 								{title}
-								{
-									badges && (
-										<span className="inline-flex gap-x-1">
-											{badges.map((badge, index) => (
-												<Badge
-													variant="secondary"
-													className="align-middle text-xs"
-													key={index}
-												>
-													{badge}
-												</Badge>
-											))}
-										</span>
-									)
-								}
+								{badges && (
+									<span className="inline-flex gap-x-1 ml-2">
+										{badges.map((badge, index) => (
+											<Badge
+												variant="secondary"
+												className="align-middle text-xs"
+												key={index}
+											>
+												{badge}
+											</Badge>
+										))}
+									</span>
+								)}
 							</h3>
 							<div className="text-xs sm:text-sm tabular-nums text-muted-foreground text-right">
 								{period}
 							</div>
 						</div>
-						{subtitle && <div className="font-sans text-xs">{subtitle}</div>}
+						{subtitle && (
+							<div className="font-sans text-xs">{subtitle}</div>
+						)}
 					</CardHeader>
-					<div className="py-4">
-						{
-							description && (
-								<ul className="flex flex-col gap-3">
-									{
-										description.map((desc, index) => {
-											return (
-												<div className="flex gap-2" key={index}>
-													<p>{index + 1}.</p>
-													<li key={index} className="text-md font-small">{desc}</li>
-												</div>
-											)
-										})
-									}
-								</ul>
-							)
-						}
-					</div>
+					{description && (
+						<ul className="py-4 space-y-2 list-none">
+							{description.map((desc, index) => (
+								<li
+									key={index}
+									className="text-xs sm:text-sm text-muted-foreground flex gap-2"
+								>
+									<span className="text-foreground/40 select-none">
+										{index + 1}.
+									</span>
+									<span>{desc}</span>
+								</li>
+							))}
+						</ul>
+					)}
 				</div>
 			</Card>
 		</Link>
