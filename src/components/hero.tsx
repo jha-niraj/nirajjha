@@ -17,7 +17,7 @@ function Portrait() {
 	return (
 		<div className="relative shrink-0">
 			<div className="relative aspect-square w-28 overflow-hidden rounded-2xl border border-border bg-muted sm:w-36">
-				<span className="absolute inset-0 flex items-center justify-center text-3xl font-semibold tracking-tight text-muted-foreground/60">
+				<span className="absolute inset-0 flex items-center justify-center text-4xl font-semibold tracking-tight text-muted-foreground/60">
 					{DATA.initials}
 				</span>
 				<Image
@@ -45,7 +45,7 @@ export function Hero() {
 			<div className="flex flex-col-reverse gap-8 sm:flex-row sm:items-start sm:justify-between sm:gap-10">
 				<div className="flex-1 space-y-5">
 					<BlurFade delay={DELAY}>
-						<div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+						<div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-muted-foreground">
 							<span className="relative flex size-1.5">
 								<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/50" />
 								<span className="relative inline-flex size-1.5 rounded-full bg-foreground" />
@@ -59,11 +59,11 @@ export function Hero() {
 							as="h1"
 							delay={DELAY * 2}
 							yOffset={8}
-							className="text-4xl font-semibold tracking-tighter sm:text-5xl"
+							className="text-5xl font-semibold tracking-tighter sm:text-6xl"
 							text={DATA.name}
 						/>
 						<BlurFade delay={DELAY * 3}>
-							<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+							<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-muted-foreground">
 								<span className="font-medium text-foreground">
 									{DATA.role}
 								</span>
@@ -82,7 +82,7 @@ export function Hero() {
 					</div>
 
 					<BlurFade delay={DELAY * 4}>
-						<p className="max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground">
+						<p className="max-w-xl text-pretty text-base leading-relaxed text-muted-foreground">
 							{DATA.description}
 						</p>
 					</BlurFade>
@@ -91,7 +91,7 @@ export function Hero() {
 						<div className="flex flex-wrap items-center gap-2 pt-1">
 							<Link
 								href={`mailto:${DATA.contact.email}`}
-								className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85"
+								className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-85"
 							>
 								<Mail className="size-3.5" />
 								Get in touch
@@ -100,7 +100,7 @@ export function Hero() {
 								href={DATA.resumeUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+								className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
 							>
 								<FileText className="size-3.5" />
 								Résumé
@@ -114,7 +114,7 @@ export function Hero() {
 										target="_blank"
 										rel="noopener noreferrer"
 										aria-label={social.name}
-										className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+										className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
 									>
 										<social.icon className="size-3.5" />
 										<span className="hidden sm:inline">{social.name}</span>
@@ -135,10 +135,10 @@ export function Hero() {
 					{DATA.stats.map((stat) => (
 						<div key={stat.label} className="px-4 py-4 text-center sm:px-6">
 							<dt className="sr-only">{stat.label}</dt>
-							<dd className="text-xl font-semibold tracking-tight sm:text-2xl">
+							<dd className="text-2xl font-semibold tracking-tight sm:text-3xl">
 								{stat.value}
 							</dd>
-							<p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+							<p className="mt-1 text-[12px] uppercase tracking-wider text-muted-foreground">
 								{stat.label}
 							</p>
 						</div>

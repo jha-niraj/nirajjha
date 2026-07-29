@@ -61,7 +61,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
 			aria-label="Table of contents"
 			className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto"
 		>
-			<p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+			<p className="mb-4 text-[12px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
 				Contents
 			</p>
 
@@ -74,7 +74,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
 								href={`#${h.id}`}
 								aria-current={active ? "location" : undefined}
 								className={cn(
-									"-ml-px block border-l-2 py-1.5 text-sm leading-snug transition-colors",
+									"-ml-px block border-l-2 py-1.5 text-base leading-snug transition-colors",
 									h.level === 3 ? "pl-6" : "pl-4",
 									active
 										? "border-foreground font-semibold text-foreground"

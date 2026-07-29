@@ -38,7 +38,7 @@ export function SectionHeading({
 				className
 			)}
 		>
-			<h2 className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+			<h2 className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
 				{children}
 			</h2>
 			{action ? <div className="shrink-0">{action}</div> : null}

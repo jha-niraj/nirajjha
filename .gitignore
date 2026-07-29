@@ -38,6 +38,9 @@ bun.lockb
 .env.*
 !.env.example
 
+# rendered newsletter previews from `pnpm blog:preview`
+.preview-*.html
+
 # vercel
 .vercel
 

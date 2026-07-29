@@ -3,7 +3,12 @@
 import { react, trackView } from "@/app/actions/engagement";
 import type { PostEngagement, ReactionKind } from "@/db/queries";
 import { cn } from "@/lib/utils";
-import { useVisitorId } from "@/lib/visitor";
+import {
+	readCachedReaction,
+	useIsHydrated,
+	writeCachedReaction,
+} from "@/lib/visitor";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Eye, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -22,48 +27,59 @@ export function PostEngagementBar({
 	slug: string;
 	initial: PostEngagement;
 }) {
-	const visitorId = useVisitorId();
+	const hydrated = useIsHydrated();
 	const [state, setState] = useState<PostEngagement>(initial);
 	const [pending, startTransition] = useTransition();
+	const reduced = useReducedMotion();
+
+	// The page is static and its HTML is shared by every reader, so the server
+	// cannot render "you liked this" for one person. The locally cached vote
+	// fills that gap on the very first client paint, and the server's real
+	// answer replaces it a moment later. Without this the button always starts
+	// neutral and visibly flips once the round trip lands.
+	const myReaction = hydrated
+		? (state.myReaction ?? readCachedReaction(slug))
+		: state.myReaction;
 
 	useEffect(() => {
-		if (!visitorId) return;
 		let cancelled = false;
 
 		// One view per mount. A refresh counts again, which is the same thing
 		// every simple counter on the internet does.
-		trackView(slug, visitorId).then((next) => {
-			if (!cancelled && next.views > 0) setState(next);
+		trackView(slug).then((next) => {
+			if (cancelled || next.views === 0) return;
+			setState(next);
+			// Reconcile the cache with what the database actually holds.
+			writeCachedReaction(slug, next.myReaction);
 		});
 
 		return () => {
 			cancelled = true;
 		};
-	}, [slug, visitorId]);
+	}, [slug]);
 
 	function vote(kind: ReactionKind) {
-		if (!visitorId) return;
-
 		// Optimistic: toggling off when it is already picked, switching
 		// otherwise. The server response replaces this either way.
+		const was = myReaction;
+		const optimistic = was === kind ? null : kind;
+
 		setState((prev) => {
-			const was = prev.myReaction;
 			const next: PostEngagement = { ...prev };
 			if (was === "like") next.likes -= 1;
 			if (was === "dislike") next.dislikes -= 1;
-			if (was === kind) {
-				next.myReaction = null;
-			} else {
-				next.myReaction = kind;
-				if (kind === "like") next.likes += 1;
-				else next.dislikes += 1;
-			}
+			if (optimistic === "like") next.likes += 1;
+			if (optimistic === "dislike") next.dislikes += 1;
+			next.myReaction = optimistic;
 			return next;
 		});
+		writeCachedReaction(slug, optimistic);
 
 		startTransition(async () => {
 			try {
-				setState(await react(slug, visitorId, kind));
+				const next = await react(slug, kind);
+				setState(next);
+				writeCachedReaction(slug, next.myReaction);
 			} catch {
 				/* keep the optimistic value; a reload will reconcile */
 			}
@@ -78,7 +94,7 @@ export function PostEngagementBar({
 
 	return (
 		<div className="flex flex-wrap items-center gap-2">
-			<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground">
+			<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-base font-medium text-muted-foreground">
 				<Eye className="size-4" />
 				{state.views.toLocaleString()}
 				<span className="text-muted-foreground/70">
@@ -87,25 +103,50 @@ export function PostEngagementBar({
 			</span>
 
 			{buttons.map(({ kind, icon: Icon, count }) => {
-				const active = state.myReaction === kind;
+				const active = myReaction === kind;
 				return (
-					<button
+					<motion.button
 						key={kind}
 						type="button"
 						onClick={() => vote(kind)}
-						disabled={!visitorId || pending}
+						disabled={pending}
 						aria-pressed={active}
 						aria-label={kind === "like" ? "Like this post" : "Dislike this post"}
+						whileTap={reduced ? undefined : { scale: 0.94 }}
+						transition={{ type: "spring", stiffness: 500, damping: 28 }}
 						className={cn(
-							"inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50",
+							"inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-base font-medium transition-colors disabled:opacity-50",
 							active
 								? "border-foreground bg-foreground text-background"
 								: "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
 						)}
 					>
-						<Icon className="size-4" />
-						<span className="tabular-nums">{count}</span>
-					</button>
+						{/* The icon nudges when the vote lands, so the button confirms
+						    itself even when the count stays visually similar. */}
+						<motion.span
+							animate={reduced || !active ? {} : { scale: [1, 1.25, 1] }}
+							transition={{ duration: 0.32, ease: "easeOut" }}
+							className="inline-flex"
+						>
+							<Icon className="size-4" />
+						</motion.span>
+
+						{/* Rolls the old number out and the new one in. */}
+						<span className="relative inline-block min-w-[1ch] text-center tabular-nums">
+							<AnimatePresence mode="popLayout" initial={false}>
+								<motion.span
+									key={count}
+									initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
+									animate={{ opacity: 1, y: 0 }}
+									exit={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+									transition={{ duration: 0.18, ease: "easeOut" }}
+									className="inline-block"
+								>
+									{count}
+								</motion.span>
+							</AnimatePresence>
+						</span>
+					</motion.button>
 				);
 			})}
 		</div>

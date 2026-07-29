@@ -5,7 +5,7 @@ summary: "I build AI products end to end at Creatr: email pipelines on Gmail web
 art: "pipeline"
 category: "Engineering"
 kind: "essay"
-tags: ["Introduction", "Engineering", "AI"]
+tags: ["Introduction", "Engineering", "AI", "Databases", "nextjs"]
 featured: true
 draft: false
 ---
@@ -29,6 +29,20 @@ The piece I am most attached to is an AI email pipeline built on [Gmail push not
 5. An admin approves it. Only then does it send.
 6. Opens come back through a tracking pixel.
 
+Drawn out, the whole thing is small enough to fit in your head:
+
+```mermaid
+flowchart LR
+  A[Form submission] --> B[Gmail webhook]
+  B --> C{Pick sender identity}
+  C --> D[Gather evidence]
+  D --> E[Claude drafts]
+  E --> F{Admin approves?}
+  F -- yes --> G[Send]
+  F -- no --> H[Back to draft]
+  G --> I[Track opens]
+```
+
 Step five is the whole design. A model that drafts an email is a product. A model that sends one is a liability. I will come back to that.
 
 ### Integrations, which is where the time actually goes
@@ -44,6 +58,23 @@ Part of that surface is a self-healing agent that handles routine software tasks
 I also built a long-form report pipeline. Uploaded documents are embedded, and Claude pulls the section it needs while it writes, rather than trying to hold a two-hundred-page brief in one context window.
 
 This is [retrieval-augmented generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation), the pattern from [Lewis et al., 2020](https://arxiv.org/abs/2005.11401), applied to a boring business problem. If you want the mechanics, Anthropic's [embeddings guide](https://platform.claude.com/docs/en/build-with-claude/embeddings) is a good starting point.
+
+The order things happen in matters more than any single component:
+
+```mermaid
+sequenceDiagram
+  participant W as Writer
+  participant R as Retriever
+  participant V as pgvector
+  participant C as Claude
+  W->>R: Need the section on pricing
+  R->>V: Embed query, search chunks
+  V-->>R: Top matching passages
+  R->>C: Passages plus the ask
+  C-->>W: Section, grounded in the docs
+```
+
+Note where the model sits. It is the last step, not the first, and it only ever sees passages that were retrieved for the question actually being asked.
 
 Alongside it there is a guarded product assistant with multi-layer checks on every write action. It can read almost anything. What it can change is a much shorter list.
 
@@ -111,6 +142,21 @@ model Student {
 
 It is a boring decision. It is also the reason a multi-tenant platform did not turn into a data leak. If you are doing this in raw Postgres, [row-level security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html) enforces the same guarantee one layer lower, where an ORM mistake cannot route around it.
 
+The tenancy boundary, as a picture:
+
+```mermaid
+erDiagram
+  SCHOOL ||--o{ STUDENT : enrolls
+  SCHOOL ||--o{ STAFF : employs
+  SCHOOL ||--o{ EXAM : schedules
+  STUDENT ||--o{ RESULT : earns
+  EXAM ||--o{ RESULT : produces
+```
+
+If you want the ninety-second version of why any of this matters before reading further:
+
+[SQL explained in 100 seconds](https://www.youtube.com/watch?v=zsjvFFKOm3c)
+
 ### 2. AI features need guardrails, not optimism
 
 A model that drafts is a product. A model that acts is a liability, unless you decided in advance what it may do and what happens when it is wrong.
@@ -149,6 +195,8 @@ Not because it is fashionable. Because I have shipped enough on it to know where
 - **Infra:** [Vercel](https://vercel.com), Docker, [PostHog](https://posthog.com), [Resend](https://resend.com)
 
 This site runs on that stack, incidentally. Next.js on Vercel, Neon for Postgres, Drizzle for the schema, Resend for the mail. The comment thread below is a Postgres table, the subscribe box is a Resend segment.
+
+https://www.youtube.com/watch?v=gSSsZReIFRk
 
 ## What I'm working on next
 

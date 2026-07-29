@@ -1,7 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { AnimatePresence, motion, Variants } from "framer-motion";
+import {
+	AnimatePresence,
+	motion,
+	useReducedMotion,
+	Variants,
+} from "framer-motion";
 import { useMemo } from "react";
 
 interface BlurFadeTextProps {
@@ -34,10 +39,19 @@ const BlurFadeText = ({
 	animateByCharacter = false,
 	as = "div",
 }: BlurFadeTextProps) => {
-	const defaultVariants: Variants = {
-		hidden: { y: yOffset, opacity: 0, filter: "blur(8px)" },
-		visible: { y: -yOffset, opacity: 1, filter: "blur(0px)" },
-	};
+	const reduced = useReducedMotion();
+
+	const defaultVariants: Variants = reduced
+		? {
+				hidden: { opacity: 0 },
+				visible: { opacity: 1 },
+			}
+		: {
+				hidden: { y: yOffset, opacity: 0, filter: "blur(8px)" },
+				// Lands at 0. It used to finish at -yOffset, which left the heading
+				// permanently 8px above its layout position.
+				visible: { y: 0, opacity: 1, filter: "blur(0px)" },
+			};
 	const combinedVariants = variant || defaultVariants;
 	const characters = useMemo(() => Array.from(text), [text]);
 

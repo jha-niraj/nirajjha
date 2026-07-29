@@ -2,6 +2,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastProvider } from "@/components/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DATA } from "@/data/resume";
 import { cn } from "@/lib/utils";
@@ -122,16 +123,18 @@ export default function RootLayout({
 					disableTransitionOnChange
 				>
 					<TooltipProvider delayDuration={0}>
-						<div className="flex min-h-screen flex-col px-5 pb-32 sm:px-8">
-							<SiteHeader />
-							<div className="mx-auto w-full max-w-7xl flex-1">
-								{children}
+						<ToastProvider>
+							<div className="flex min-h-screen flex-col px-5 pb-32 sm:px-8">
+								<SiteHeader />
+								<div className="mx-auto w-full max-w-7xl flex-1">
+									{children}
+								</div>
+								<div className="mx-auto w-full max-w-7xl">
+									<SiteFooter />
+								</div>
 							</div>
-							<div className="mx-auto w-full max-w-7xl">
-								<SiteFooter />
-							</div>
-						</div>
-						<Navbar />
+							<Navbar />
+						</ToastProvider>
 					</TooltipProvider>
 				</ThemeProvider>
 			</body>

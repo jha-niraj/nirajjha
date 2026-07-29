@@ -7,7 +7,8 @@ import {
 } from "@/app/actions/engagement";
 import type { CommentNode } from "@/db/queries";
 import { cn } from "@/lib/utils";
-import { useRememberedName, useVisitorId } from "@/lib/visitor";
+import { useIsHydrated, useRememberedName } from "@/lib/visitor";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CornerDownRight, Loader2, MessageSquare, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
@@ -62,7 +63,6 @@ function CommentForm({
 	autoFocus?: boolean;
 	compact?: boolean;
 }) {
-	const visitorId = useVisitorId();
 	const [name, setName] = useRememberedName();
 	const [body, setBody] = useState("");
 	const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,6 @@ function CommentForm({
 
 	function submit(e: React.FormEvent) {
 		e.preventDefault();
-		if (!visitorId) return;
 		setError(null);
 
 		startTransition(async () => {
@@ -79,7 +78,6 @@ function CommentForm({
 				parentId,
 				authorName: name,
 				body,
-				visitorId,
 			});
 
 			if (result.ok) {
@@ -102,7 +100,7 @@ function CommentForm({
 					maxLength={60}
 					required
 					aria-label="Your name"
-					className="h-10 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground focus:border-foreground/40"
+					className="h-10 rounded-lg border border-border bg-card px-3 text-base font-medium text-foreground outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground focus:border-foreground/40"
 				/>
 				<textarea
 					value={body}
@@ -113,15 +111,15 @@ function CommentForm({
 					required
 					autoFocus={autoFocus}
 					aria-label="Comment"
-					className="resize-y rounded-lg border border-border bg-card px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/40"
+					className="resize-y rounded-lg border border-border bg-card px-3 py-2.5 text-base leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/40"
 				/>
 			</div>
 
 			<div className="flex flex-wrap items-center gap-3">
 				<button
 					type="submit"
-					disabled={pending || !visitorId || body.trim().length < 2}
-					className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-85 disabled:opacity-40"
+					disabled={pending || body.trim().length < 2}
+					className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-85 disabled:opacity-40"
 				>
 					{pending && <Loader2 className="size-3.5 animate-spin" />}
 					{parentId ? "Reply" : "Post comment"}
@@ -131,19 +129,19 @@ function CommentForm({
 					<button
 						type="button"
 						onClick={onCancel}
-						className="text-xs font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+						className="text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
 					>
 						Cancel
 					</button>
 				)}
 
-				<span className="ml-auto text-[11px] text-muted-foreground">
+				<span className="ml-auto text-[12px] text-muted-foreground">
 					{body.length}/2000
 				</span>
 			</div>
 
 			{error && (
-				<p role="alert" className="text-xs font-medium text-destructive">
+				<p role="alert" className="text-sm font-medium text-destructive">
 					{error}
 				</p>
 			)}
@@ -164,7 +162,6 @@ function CommentItem({
 	depth: number;
 	onChange: (next: CommentNode[]) => void;
 }) {
-	const visitorId = useVisitorId();
 	const [replying, setReplying] = useState(false);
 	const [pending, startTransition] = useTransition();
 
@@ -172,35 +169,42 @@ function CommentItem({
 	// after three levels so a deep argument does not slide off a phone screen;
 	// the parent is still shown above each reply, so the structure stays clear.
 	const indent = Math.min(depth, 3);
+	const reduced = useReducedMotion();
 
 	function onDelete() {
-		if (!visitorId) return;
 		startTransition(async () => {
-			onChange(await removeComment(slug, comment.id, visitorId));
+			onChange(await removeComment(slug, comment.id));
 		});
 	}
 
 	return (
-		<li className={cn(indent > 0 && "border-l border-border pl-4 sm:pl-6")}>
+		<motion.li
+			layout={!reduced}
+			initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={reduced ? { opacity: 0 } : { opacity: 0, x: -8 }}
+			transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+			className={cn(indent > 0 && "border-l border-border pl-4 sm:pl-6")}
+		>
 			<div className="py-4">
 				<div className="flex items-center gap-2.5">
 					<span
 						aria-hidden
-						className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-[10px] font-semibold text-muted-foreground"
+						className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-[11px] font-semibold text-muted-foreground"
 					>
 						{comment.isDeleted ? "?" : initials(comment.authorName)}
 					</span>
-					<span className="text-sm font-semibold text-foreground">
+					<span className="text-base font-semibold text-foreground">
 						{comment.isDeleted ? "Removed" : comment.authorName}
 					</span>
 					{comment.isMine && !comment.isDeleted && (
-						<span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+						<span className="rounded-full border border-border px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
 							You
 						</span>
 					)}
 					<time
 						dateTime={comment.createdAt}
-						className="text-xs text-muted-foreground"
+						className="text-sm text-muted-foreground"
 					>
 						{relativeTime(comment.createdAt)}
 					</time>
@@ -208,7 +212,7 @@ function CommentItem({
 
 				<p
 					className={cn(
-						"mt-2.5 whitespace-pre-wrap pl-[2.375rem] text-sm leading-relaxed",
+						"mt-2.5 whitespace-pre-wrap pl-[2.375rem] text-base leading-relaxed",
 						comment.isDeleted
 							? "italic text-muted-foreground/70"
 							: "text-muted-foreground"
@@ -222,7 +226,7 @@ function CommentItem({
 						<button
 							type="button"
 							onClick={() => setReplying((v) => !v)}
-							className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+							className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
 						>
 							<CornerDownRight className="size-3" />
 							Reply
@@ -232,7 +236,7 @@ function CommentItem({
 								type="button"
 								onClick={onDelete}
 								disabled={pending}
-								className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+								className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
 							>
 								<Trash2 className="size-3" />
 								Delete
@@ -257,18 +261,20 @@ function CommentItem({
 
 			{comment.replies.length > 0 && (
 				<ul className="pl-[2.375rem]">
-					{comment.replies.map((child) => (
-						<CommentItem
-							key={child.id}
-							comment={child}
-							slug={slug}
-							depth={depth + 1}
-							onChange={onChange}
-						/>
-					))}
+					<AnimatePresence initial={false}>
+						{comment.replies.map((child) => (
+							<CommentItem
+								key={child.id}
+								comment={child}
+								slug={slug}
+								depth={depth + 1}
+								onChange={onChange}
+							/>
+						))}
+					</AnimatePresence>
 				</ul>
 			)}
-		</li>
+		</motion.li>
 	);
 }
 
@@ -281,34 +287,34 @@ export function Comments({
 	slug: string;
 	initial: CommentNode[];
 }) {
-	const visitorId = useVisitorId();
+	const hydrated = useIsHydrated();
 	const [comments, setComments] = useState(initial);
 
 	// The server render cannot know who you are, so `isMine` starts false for
 	// everything. Once the visitor id is available, refetch so your own
 	// comments show their delete control.
 	useEffect(() => {
-		if (!visitorId) return;
+		if (!hydrated) return;
 		let cancelled = false;
-		loadComments(slug, visitorId).then((next) => {
+		loadComments(slug).then((next) => {
 			if (!cancelled) setComments(next);
 		});
 		return () => {
 			cancelled = true;
 		};
-	}, [slug, visitorId]);
+	}, [slug, hydrated]);
 
 	const total = useMemo(() => countAll(comments), [comments]);
 
 	return (
 		<section id="comments" className="mt-20 border-t border-border pt-10">
-			<h2 className="flex items-center gap-2.5 text-xl font-semibold tracking-tight">
+			<h2 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
 				<MessageSquare className="size-5" />
 				{total === 0
 					? "Comments"
 					: `${total} ${total === 1 ? "comment" : "comments"}`}
 			</h2>
-			<p className="mt-2 text-sm text-muted-foreground">
+			<p className="mt-2 text-base text-muted-foreground">
 				No account needed. Pick a name and say what you think.
 			</p>
 
@@ -318,15 +324,17 @@ export function Comments({
 
 			{comments.length > 0 && (
 				<ul className="mt-8 divide-y divide-border border-t border-border">
-					{comments.map((comment) => (
-						<CommentItem
-							key={comment.id}
-							comment={comment}
-							slug={slug}
-							depth={0}
-							onChange={setComments}
-						/>
-					))}
+					<AnimatePresence initial={false}>
+						{comments.map((comment) => (
+							<CommentItem
+								key={comment.id}
+								comment={comment}
+								slug={slug}
+								depth={0}
+								onChange={setComments}
+							/>
+						))}
+					</AnimatePresence>
 				</ul>
 			)}
 		</section>

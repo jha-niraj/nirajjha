@@ -12,6 +12,8 @@ export type PostSummary = {
 	publishedAt: string;
 	readingTime: number;
 	tags: string[];
+	/** Slug form, e.g. `databases`. Run through `categoryLabel` to display. */
+	category?: string;
 	art?: string;
 	featured: boolean;
 	/** Heading text, so search can match on what a post actually covers. */

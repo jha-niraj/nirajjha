@@ -1,4 +1,4 @@
-import { DATA } from "@/data/resume";
+import { DATA, VISIBLE_PROJECTS } from "@/data/resume";
 import { SITE_URL as SITE } from "@/lib/site";
 
 /**
@@ -127,8 +127,8 @@ export function buildProfileGraph() {
 				"@type": "ItemList",
 				"@id": `${SITE}/#projects`,
 				name: `Projects - ${DATA.name}`,
-				numberOfItems: DATA.projects.length,
-				itemListElement: DATA.projects.map((p, i) => ({
+				numberOfItems: VISIBLE_PROJECTS.length,
+				itemListElement: VISIBLE_PROJECTS.map((p, i) => ({
 					"@type": "ListItem",
 					position: i + 1,
 					item: {

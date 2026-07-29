@@ -1,12 +1,15 @@
 import "server-only";
 
 import { CONTENT_DIR } from "@/lib/site";
+import { categorySlug } from "@/lib/categories";
+import { canonicalTag, sortTags } from "@/lib/tags";
 import fs from "fs";
 import GithubSlugger from "github-slugger";
 import matter from "gray-matter";
 import path from "path";
 import { cache } from "react";
 import readingTime from "reading-time";
+import rehypeEmbeds from "@/lib/rehype-embeds";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypePrettyCode from "rehype-pretty-code";
@@ -61,11 +64,15 @@ function getMDXFiles(dir: string) {
  * (index, RSS, sitemap, JSON-LD) can rely on the same shape.
  */
 function normalize(raw: Record<string, unknown>, slug: string): PostMetadata {
-	const tags = Array.isArray(raw.tags)
+	const rawTags = Array.isArray(raw.tags)
 		? raw.tags.map(String)
 		: typeof raw.tags === "string"
 			? raw.tags.split(",").map((t) => t.trim())
 			: [];
+
+	// Collapse spellings onto the canonical topic, then dedupe: a post tagged
+	// both "nextjs" and "Next.js" should produce one chip, not two.
+	const tags = [...new Set(rawTags.map(canonicalTag).filter(Boolean))];
 
 	return {
 		title: String(raw.title ?? slug),
@@ -74,7 +81,9 @@ function normalize(raw: Record<string, unknown>, slug: string): PostMetadata {
 		summary: String(raw.summary ?? ""),
 		image: raw.image ? String(raw.image) : undefined,
 		art: raw.art ? String(raw.art) : undefined,
-		category: raw.category ? String(raw.category) : undefined,
+		// Normalised on the way in, so the column and the frontmatter always
+		// agree on spelling. The title-case label is applied at render time.
+		category: raw.category ? categorySlug(String(raw.category)) : undefined,
 		kind: raw.kind ? String(raw.kind) : undefined,
 		tags,
 		draft: raw.draft === true,
@@ -87,6 +96,9 @@ export async function markdownToHTML(markdown: string) {
 		.use(remarkParse)
 		.use(remarkGfm)
 		.use(remarkRehype)
+		// Before rehype-pretty-code on purpose: mermaid fences have to be lifted
+		// out while their source is still plain text, not shiki spans.
+		.use(rehypeEmbeds)
 		.use(rehypeSlug)
 		.use(rehypeAutolinkHeadings, {
 			behavior: "wrap",
@@ -191,7 +203,9 @@ export const getAllTags = cache(async () => {
 			counts.set(tag, (counts.get(tag) ?? 0) + 1);
 		}
 	}
-	return [...counts.entries()]
-		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-		.map(([tag, count]) => ({ tag, count }));
+	// Registry order rather than raw frequency, so the bar keeps a stable,
+	// meaningful shape as posts are added.
+	return sortTags(
+		[...counts.entries()].map(([tag, count]) => ({ tag, count }))
+	);
 });

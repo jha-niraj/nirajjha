@@ -1,0 +1,211 @@
+How it works (the mental model)
+
+1. next-themes owns the actual theme state - it toggles a class="dark" on <html>.
+2. Every app enables disableTransitionOnChange, which kills CSS transitions at the moment of switch. So a normal transition: background 0.3s will NOT animate the theme. That's deliberate - it prevents a slow flicker on load.
+3. Because CSS transitions are dead, the animation is done with the browser's View Transitions API instead. startViewTransition() snapshots the old theme, applies the new one synchronously (via flushSync), snapshots the new theme, and lets you animate between the two snapshots with CSS ::view-transition-* pseudo-elements.
+4. The wipe is a clip-path: inset() keyframe: light→dark wipes left-to-right, dark→light wipes right-to-left. Direction is chosen by the theme you're switching to, not the click point.
+
+There are two modes: reveal (directional wipe, on a user click) and fade (plain cross-fade, for programmatic switches with no click origin).
+
+---
+1. Dependencies
+
+pnpm add next-themes
+# react-dom (flushSync) and lucide-react (icons) you already have
+
+The View Transitions API is native to the browser - no polyfill. Unsupported browsers and prefers-reduced-motion fall back to an instant, un-animated switch.
+
+2. Wire the provider in your root layout
+
+// app/layout.tsx
+import { ThemeProvider } from "@/components/themeprovider"
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    // suppressHydrationWarning is REQUIRED - next-themes writes the class before React hydrates
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}
+
+3. The provider + startThemeTransition (the core file)
+
+This is packages/ui/src/components/themeprovider.tsx verbatim - copy it as-is:
+
+"use client"
+
+import * as React from "react"
+import { flushSync } from "react-dom"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { useTheme } from "next-themes"
+
+export function ThemeProvider({
+  children,
+  ...props
+}: React.ComponentProps<typeof NextThemesProvider>) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+}
+
+/** The click point the reveal expands from. */
+export type ThemeTransitionOrigin = { x: number; y: number }
+
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (callback: () => void) => { ready: Promise<void>; finished: Promise<void> }
+}
+
+/**
+ * Animate a theme change with the View Transitions API: a directional horizontal WIPE of the
+ * new theme - light->dark wipes LEFT-to-RIGHT, dark->light wipes RIGHT-to-LEFT. A straight
+ * clip-path inset() wipe (not a corner circle) keeps the reveal edge vertical.
+ *
+ * disableTransitionOnChange kills CSS transitions at switch time, so a View-Transition is the
+ * only thing that animates. flushSync applies the html class synchronously inside the callback
+ * so the "after" snapshot is correct. The clip is driven by a CSS keyframe (globals.css), not a
+ * JS .animate() after ready - binding the keyframe means the new snapshot is clipped from its
+ * first frame, so there's no flash-then-jump.
+ */
+export function startThemeTransition(apply: () => void, origin?: ThemeTransitionOrigin): void {
+  const doc = typeof document !== "undefined"
+    ? (document as DocumentWithViewTransition)
+    : undefined
+  const prefersReduced = typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+
+  if (!doc?.startViewTransition || prefersReduced) {
+    apply()
+    return
+  }
+
+  const root = document.documentElement
+  if (origin) {
+    // Direction chosen by the theme we switch TO. attribute="class" -> `dark` on <html> means
+    // dark theme, so the absence of `dark` right now means this click turns dark ON.
+    const goingToDark = !root.classList.contains("dark")
+    // inset(top right bottom left): far edge starts collapsed at 100%, animates to 0.
+    const clipFrom = goingToDark ? "inset(0 100% 0 0)" : "inset(0 0 0 100%)"
+    root.style.setProperty("--vt-clip-from", clipFrom)
+  }
+  // reveal = directional wipe (user toggle); fade = cross-fade (programmatic, no origin).
+  root.dataset.themeTransition = origin ? "reveal" : "fade"
+
+  const transition = doc.startViewTransition(() => flushSync(apply))
+  transition.finished
+    .catch(() => {
+      // A superseding transition (rapid re-toggle) rejects - safe to ignore.
+    })
+    .finally(() => {
+      delete root.dataset.themeTransition
+      root.style.removeProperty("--vt-clip-from")
+    })
+}
+
+export { useTheme }
+
+4. The CSS keyframes (drop into your globals.css)
+
+This is what actually makes the wipe move. Without it, the theme changes instantly.
+
+/* ── Animated theme switch (View Transitions API) ──────────────────────────── */
+@keyframes vt-theme-reveal {
+  /* inset(top right bottom left): the far edge starts collapsed at 100% and animates to 0. */
+  from { clip-path: var(--vt-clip-from, inset(0 100% 0 0)); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+/* Reveal mode: new theme wipes in over a STATIC old snapshot underneath.
+   Force mix-blend-mode:normal - the UA default (plus-lighter) ADDS the two snapshots' colours
+   inside the revealed area and flashes bright, worst on dark->light. */
+html[data-theme-transition="reveal"]::view-transition-old(root),
+html[data-theme-transition="reveal"]::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+html[data-theme-transition="reveal"]::view-transition-old(root) {
+  animation: none;
+  z-index: 0;
+}
+html[data-theme-transition="reveal"]::view-transition-new(root) {
+  animation: vt-theme-reveal 0.8s cubic-bezier(0.4, 0, 0.2, 1) both; /* the sweep duration */
+  z-index: 1;
+}
+
+/* Fade mode (no click origin, e.g. a programmatic switch): gentle default cross-fade. */
+html[data-theme-transition="fade"]::view-transition-old(root),
+html[data-theme-transition="fade"]::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
+/* Anti-flash: backdrop-filter can't be captured in a snapshot, so it flashes over both.
+   Strip the blur during the transition, and force any tagged glass surface to a solid bg. */
+html[data-theme-transition] *,
+html[data-theme-transition] *::before,
+html[data-theme-transition] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-theme-transition] .theme-vt-glass {
+  background-color: var(--background) !important; /* your solid per-theme bg token */
+}
+
+/* Honour reduced-motion: switch still happens, just no sweep. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+5. The toggle button (the caller)
+
+Any button just calls startThemeTransition, passing the click coordinates. Here's the minimal version:
+
+"use client"
+
+import { useEffect, useState } from "react"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { startThemeTransition } from "@/components/themeprovider"
+
+export default function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])   // resolvedTheme is undefined during SSR
+
+  const isDark = mounted && resolvedTheme === "dark"
+
+  return (
+    <button
+      type="button"
+      onClick={(e) =>
+        startThemeTransition(
+          () => setTheme(isDark ? "light" : "dark"),
+          { x: e.clientX, y: e.clientY },
+        )
+      }
+      aria-label="Toggle theme"
+      className="relative inline-flex size-8 items-center justify-center rounded-lg"
+    >
+      {/* Both icons always rendered + cross-faded so there's no wrong-icon flash on hydration */}
+      <Sun  className={`absolute size-4 transition-all duration-200 ${mounted && !isDark ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} aria-hidden />
+      <Moon className={`absolute size-4 transition-all duration-200 ${isDark ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} aria-hidden />
+    </button>
+  )
+}
+
+---
+Gotchas that will bite you if you skip them
+
+These are the non-obvious things this implementation solved the hard way - carry them over:
+
+1. flushSync is mandatory. setTheme() inside startViewTransition must apply synchronously, or the browser snapshots the old theme twice and nothing animates. React batches state updates by default, so flushSync forces it.
+2. Keyframe-driven clip, NOT .animate() after transition.ready. The obvious approach - awaiting transition.ready then calling .animate() - leaves one unclipped frame where the new theme flashes full-screen before the clip snaps back. Binding the keyframe with both fill means the new snapshot is clipped from frame one.
+3. mix-blend-mode: normal on the snapshots. The browser's default cross-fade uses plus-lighter, which adds the two overlapping snapshots' colors and produces a bright flash inside the revealed strip (worst dark→light). Forcing normal makes the new theme just paint over the old.
+4. suppressHydrationWarning on <html>. next-themes writes the class before hydration; without this you get a hydration mismatch error.
+5. backdrop-filter can't be snapshotted. Any glass/blur surface renders live over both snapshots and hard-flashes. The CSS strips blur during the transition; tag any translucent surface with className="theme-vt-glass" and give it a solid --background fallback.
+6. The --background token. Rule 5's fallback references var(--background). Make sure your project defines that CSS variable per theme (standard shadcn/Tailwind setup already does).

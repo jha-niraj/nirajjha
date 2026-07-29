@@ -55,7 +55,10 @@ export default async function Page() {
 				}}
 			/>
 
-			<main className="flex flex-col">
+			{/* The layout centres every route at max-w-7xl. The profile reads as a
+			    single column of prose, so it is pulled in to 5xl here rather than
+			    narrowing the layout and dragging the wider post pages in with it. */}
+			<main className="mx-auto flex w-full max-w-5xl flex-col">
 				<Hero />
 
 				<Section id="about" className="mb-16">
@@ -63,7 +66,7 @@ export default async function Page() {
 						<SectionHeading>About</SectionHeading>
 					</BlurFade>
 					<BlurFade delay={DELAY * 2} inView>
-						<Markdown className="prose prose-sm max-w-none text-pretty font-sans text-sm leading-relaxed text-muted-foreground dark:prose-invert prose-p:my-0 prose-p:mb-4 last:prose-p:mb-0 prose-strong:font-medium prose-strong:text-foreground">
+						<Markdown className="prose prose-base max-w-none text-pretty font-sans text-base leading-relaxed text-muted-foreground dark:prose-invert prose-p:my-0 prose-p:mb-4 last:prose-p:mb-0 prose-strong:font-medium prose-strong:text-foreground">
 							{DATA.summary}
 						</Markdown>
 					</BlurFade>
@@ -121,7 +124,7 @@ export default async function Page() {
 							{DATA.currentlyLearning.map((item) => (
 								<li
 									key={item}
-									className="flex items-start gap-3 text-xs leading-relaxed text-muted-foreground sm:text-[13px]"
+									className="flex items-start gap-3 text-sm leading-relaxed text-muted-foreground sm:text-[14px]"
 								>
 									<span
 										aria-hidden
@@ -141,7 +144,7 @@ export default async function Page() {
 								action={
 									<Link
 										href="/blogs"
-										className="group inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+										className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
 									>
 										All posts
 										<ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -181,7 +184,7 @@ export default async function Page() {
 							{DATA.credentials.map((c) => (
 								<li
 									key={c}
-									className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground"
+									className="rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground"
 								>
 									{c}
 								</li>
@@ -196,10 +199,10 @@ export default async function Page() {
 					</BlurFade>
 					<BlurFade delay={DELAY * 2} inView>
 						<div className="rounded-xl border border-border p-6 sm:p-8">
-							<h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+							<h3 className="text-2xl font-semibold tracking-tight sm:text-3xl">
 								Building something interesting?
 							</h3>
-							<p className="mt-2 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
+							<p className="mt-2 max-w-md text-pretty text-base leading-relaxed text-muted-foreground">
 								I&apos;m always up for talking about AI products, backend
 								design, or a problem that&apos;s been stuck for a while.
 								Email is fastest - DMs on{" "}
@@ -215,7 +218,7 @@ export default async function Page() {
 							</p>
 							<Link
 								href={`mailto:${DATA.contact.email}`}
-								className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-opacity hover:opacity-85"
+								className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-85"
 							>
 								{DATA.contact.email}
 								<ArrowRight className="size-3.5" />

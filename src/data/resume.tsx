@@ -293,6 +293,7 @@ export const DATA = {
 		},
 		{
 			title: "ValidateX",
+			hidden: true,
 			href: "https://github.com/jha-niraj/Validate-X",
 			dates: "2025",
 			active: false,
@@ -314,6 +315,7 @@ export const DATA = {
 		},
 		{
 			title: "AfterClass",
+			hidden: true,
 			href: "https://afterclass-nine.vercel.app",
 			dates: "2025",
 			active: false,
@@ -346,6 +348,7 @@ export const DATA = {
 		},
 		{
 			title: "Vani",
+			hidden: true,
 			href: "https://github.com/jha-niraj/Vani",
 			dates: "2025",
 			active: false,
@@ -367,3 +370,17 @@ export const DATA = {
 		},
 	],
 } as const;
+
+/**
+ * Projects that are actually shown.
+ *
+ * `hidden: true` parks a project without deleting it: the entry, its links and
+ * its copy all stay here, ready to switch back on by removing one line. Filter
+ * through this rather than reading `DATA.projects` directly, so a hidden
+ * project stays out of the page, the JSON-LD and `llms.txt` together. A project
+ * that is hidden on screen but still listed in structured data is worse than
+ * either, because search engines surface a thing the site does not show.
+ */
+export const VISIBLE_PROJECTS = DATA.projects.filter(
+	(p) => !("hidden" in p && p.hidden)
+);

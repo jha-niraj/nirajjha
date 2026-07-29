@@ -1,5 +1,5 @@
 import { getBlogPosts } from "@/data/blog";
-import { DATA } from "@/data/resume";
+import { DATA, VISIBLE_PROJECTS } from "@/data/resume";
 import { SITE_URL as SITE } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -29,7 +29,7 @@ export async function GET() {
 		)
 		.join("\n\n");
 
-	const projectLines = DATA.projects
+	const projectLines = VISIBLE_PROJECTS
 		.map(
 			(p) =>
 				`### ${p.title}${p.href.startsWith("http") ? ` (${p.href})` : ""}\n${p.tagline}. ${p.description}\nStack: ${p.technologies.join(", ")}.`

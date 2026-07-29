@@ -4,6 +4,7 @@ import { PostCard } from "@/components/post-card";
 import type { PostSummary } from "@/lib/post-types";
 import { highlight, searchPosts } from "@/lib/search";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -51,6 +52,7 @@ export function BlogExplorer({
 	const [activeTags, setActiveTags] = useState<string[]>([]);
 	const [sort, setSort] = useState<Sort>("newest");
 	const inputRef = useRef<HTMLInputElement>(null);
+	const reduced = useReducedMotion();
 
 	// "/" focuses search, Escape clears it. Cheap, and the kind of thing
 	// people who read a lot of dev blogs reach for without thinking.
@@ -114,7 +116,7 @@ export function BlogExplorer({
 						onChange={(e) => setQuery(e.target.value)}
 						placeholder="Search posts, tags, headings"
 						aria-label="Search posts"
-						className="w-full rounded-full border border-border bg-card py-3 pl-11 pr-24 text-sm font-medium text-foreground outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground focus:border-foreground/40 [&::-webkit-search-cancel-button]:appearance-none"
+						className="w-full rounded-full border border-border bg-card py-3 pl-11 pr-24 text-base font-medium text-foreground outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground focus:border-foreground/40 [&::-webkit-search-cancel-button]:appearance-none"
 					/>
 					{query ? (
 						<button
@@ -126,14 +128,14 @@ export function BlogExplorer({
 							<X className="size-4" />
 						</button>
 					) : (
-						<kbd className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded border border-border px-1.5 py-0.5 font-sans text-[11px] font-medium text-muted-foreground sm:block">
+						<kbd className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded border border-border px-1.5 py-0.5 font-sans text-[12px] font-medium text-muted-foreground sm:block">
 							/
 						</kbd>
 					)}
 				</div>
 
 				<div className="flex flex-wrap items-center gap-2">
-					<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+					<span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
 						<SlidersHorizontal className="size-3" />
 						Tags
 					</span>
@@ -146,7 +148,7 @@ export function BlogExplorer({
 								onClick={() => toggleTag(tag)}
 								aria-pressed={on}
 								className={cn(
-									"rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+									"rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
 									on
 										? "border-foreground bg-foreground text-background"
 										: "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
@@ -174,7 +176,7 @@ export function BlogExplorer({
 								disabled={query.trim().length > 0}
 								aria-pressed={sort === s.id}
 								className={cn(
-									"rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40",
+									"rounded-full px-3 py-1 text-sm font-medium transition-colors disabled:opacity-40",
 									sort === s.id && !query.trim()
 										? "bg-foreground text-background"
 										: "text-muted-foreground hover:text-foreground"
@@ -188,7 +190,7 @@ export function BlogExplorer({
 			</div>
 
 			<div className="flex items-center justify-between gap-4 border-b border-border pb-3">
-				<p className="text-sm font-medium text-muted-foreground">
+				<p className="text-base font-medium text-muted-foreground">
 					{hits.length} {hits.length === 1 ? "post" : "posts"}
 					{query.trim() && (
 						<>
@@ -208,7 +210,7 @@ export function BlogExplorer({
 					<button
 						type="button"
 						onClick={reset}
-						className="text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+						className="text-base font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
 					>
 						Reset
 					</button>
@@ -216,37 +218,65 @@ export function BlogExplorer({
 			</div>
 
 			{hits.length === 0 ? (
-				<div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
-					<p className="text-base font-medium text-foreground">
+				<motion.div
+					initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.25, ease: "easeOut" }}
+					className="rounded-2xl border border-dashed border-border px-6 py-16 text-center"
+				>
+					<p className="text-lg font-medium text-foreground">
 						Nothing matches that yet.
 					</p>
-					<p className="mt-2 text-sm text-muted-foreground">
+					<p className="mt-2 text-base text-muted-foreground">
 						Try a single word, or clear the tag filters.
 					</p>
 					<button
 						type="button"
 						onClick={reset}
-						className="mt-5 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-85"
+						className="mt-5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-85"
 					>
 						Reset filters
 					</button>
-				</div>
+				</motion.div>
 			) : (
 				<ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-					{hits.map(({ post, matchedIn }) => (
-						<li key={post.slug} className="flex flex-col gap-2">
-							<PostCard post={post} />
-							{query.trim() && matchedIn && (
-								<p className="px-1 text-[11px] text-muted-foreground">
-									Matched in {FIELD_LABEL[matchedIn]}:{" "}
-									<Highlighted
-										text={matchedIn === "title" ? post.title : post.summary}
-										query={query}
-									/>
-								</p>
-							)}
-						</li>
-					))}
+					{/* `layout` is what makes a card glide to its new column when a
+					    filter removes one above it, instead of teleporting. Keyed by
+					    slug so React tracks the same card across result sets. */}
+					<AnimatePresence mode="popLayout" initial={false}>
+						{hits.map(({ post, matchedIn }, i) => (
+							<motion.li
+								key={post.slug}
+								layout={!reduced}
+								initial={
+									reduced ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }
+								}
+								animate={{ opacity: 1, y: 0, scale: 1 }}
+								exit={
+									reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97 }
+								}
+								transition={{
+									duration: 0.28,
+									ease: [0.22, 1, 0.36, 1],
+									// Stagger only on first paint. Re-filtering should feel
+									// immediate, not like a fresh page load.
+									delay: reduced ? 0 : Math.min(i, 8) * 0.03,
+								}}
+								className="flex flex-col gap-2"
+							>
+								<PostCard post={post} />
+								{query.trim() && matchedIn && (
+									<p className="px-1 text-[12px] text-muted-foreground">
+										Matched in {FIELD_LABEL[matchedIn]}:{" "}
+										<Highlighted
+											text={matchedIn === "title" ? post.title : post.summary}
+											query={query}
+										/>
+									</p>
+								)}
+							</motion.li>
+						))}
+					</AnimatePresence>
 				</ul>
 			)}
 		</div>

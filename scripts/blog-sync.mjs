@@ -66,7 +66,7 @@ for (const file of files) {
 			${slug},
 			${String(data.title ?? slug)},
 			${String(data.summary ?? "")},
-			${data.category ? String(data.category) : null},
+			${data.category ? String(data.category).trim().toLowerCase() : null},
 			${data.kind ? String(data.kind) : null},
 			${tags},
 			${data.art ? String(data.art) : null},

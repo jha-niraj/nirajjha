@@ -6,8 +6,16 @@ Tailwind, MDX content, Drizzle + Neon for engagement data.
 ## Package manager
 
 **pnpm only.** Never run `npm install` or `yarn` in this repo. `package.json`
-declares `packageManager` and a `preinstall` guard, `.npmrc` sets
-`engine-strict`, and `package-lock.json` / `yarn.lock` are gitignored.
+declares `packageManager: pnpm@10.33.0`, which is what corepack and Vercel read
+to pick the right package manager, and `package-lock.json` / `yarn.lock` are
+gitignored so a stray npm run cannot commit a second lockfile.
+
+There is deliberately no `preinstall` guard and no `.npmrc`. Both existed once
+and were removed: the guard shelled out to npm and fetched a package over the
+network on every install, and the `.npmrc` that muted the resulting warnings
+also muted pnpm itself, so a working `pnpm install` printed nothing at all and
+looked like a failure. `packageManager` does the real enforcement where it
+counts, which is CI and Vercel.
 
 ```
 pnpm dev          # dev server
@@ -112,9 +120,47 @@ anything a reader has to read). Decorative marks and separators may go lighter.
 
 ### Layout
 
-- Root profile and post pages: `max-w-7xl`.
+- The layout centres every route at `max-w-7xl`. Post pages use it as is.
+- The root profile pulls itself in to `max-w-5xl` on its own `<main>`, because
+  it reads as one column. Narrow it there, not in the layout, or the post pages
+  come with it.
 - Prose column inside a post is capped separately so line length stays readable.
 - Section headers all use `<SectionHeading>`. Do not hand-roll one.
+
+## Theme switching
+
+The toggle animates with the **View Transitions API**, not CSS transitions. The
+provider runs with `disableTransitionOnChange`, which kills CSS transitions at
+the moment of the switch so the page does not slow-fade on load, and that also
+means a `transition: background` can never animate a theme change.
+
+`startThemeTransition()` in `components/theme-provider.tsx` is the entry point.
+A click passes its coordinates, which selects a directional wipe: left to right
+going dark, right to left coming back. A programmatic switch passes nothing and
+cross-fades instead.
+
+Four things are load-bearing. Each one was a visible bug before it was fixed:
+
+- **`flushSync` is mandatory.** React batches, so without it the class lands
+  after the browser has taken its "after" snapshot and nothing animates.
+- **The clip is a CSS keyframe, not `.animate()` after `ready`.** The `.animate()`
+  route leaves one unclipped frame where the new theme paints full screen.
+- **`mix-blend-mode: normal` on both snapshots.** The UA default is
+  `plus-lighter`, which adds their colours inside the revealed strip and flashes
+  bright, worst going dark to light.
+- **`backdrop-filter` cannot be snapshotted.** Blurred surfaces render live over
+  both snapshots and hard-flash. The CSS strips blur for the duration; tag any
+  translucent surface `theme-vt-glass` so it falls back to a solid background.
+
+## Hiding a project
+
+Set `hidden: true` on the entry in `resume.tsx` and read through
+`VISIBLE_PROJECTS`, never `DATA.projects`. The entry, its links and its copy all
+stay put, so switching it back on is one deleted line.
+
+Filtering in one place keeps the page, the JSON-LD and `llms.txt` in agreement.
+A project hidden on screen but still listed in structured data is worse than
+either, because search results then surface something the site will not show.
 
 ## Content
 
@@ -125,13 +171,19 @@ title: string           # required
 publishedAt: YYYY-MM-DD # required
 summary: string         # required, used for meta description and cards
 art: string             # optional, which animated SVG illustrates the post
-category: string        # optional, broad grouping e.g. "Engineering"
+category: string        # optional, broad grouping. Lowercase slug: "databases"
 kind: string            # optional, shape of the piece: essay | tutorial | note
 tags: [string]          # optional
 featured: boolean       # optional, pins to top of /blogs
 draft: boolean          # optional, hidden in production
 image: /path.webp       # optional, overrides the generated social card only
 ```
+
+Categories are stored lowercase and rendered in title case. `databases` in
+frontmatter and in the `posts.category` column, "Databases" on screen. The
+spellings live in `src/lib/categories.ts`, same idea as `src/lib/tags.ts`, so
+grouping never splits because one post capitalised the word and another did
+not. Both `blog.ts` and `blog-sync.mjs` lowercase on the way in.
 
 Post URLs live at the **root**: `content/hello.mdx` serves at `/hello`. The
 index is `/blogs`. When adding a root-level route (e.g. `/about`), make sure no
@@ -196,6 +248,7 @@ Posts do not use cover images. Each one gets an **animated SVG** from
 | `schema` | Entity boxes with relations drawing themselves |
 | `network` | Nodes with links firing between them |
 | `terminal` | A window with lines typing themselves out |
+| `backfill` | A table gaining a column, filled one batch at a time by a sweeping window |
 
 Pick the one that depicts what the post is actually about. Omitting `art:`
 hashes the slug to a stable choice, so it never looks random or changes between
@@ -285,6 +338,38 @@ The subscribe action writes to the `subscribers` table **before** calling
 Resend, so an outage during signup never loses the address: the row lands with
 `synced_at` null and can be pushed later. The reader is told they are on the
 list either way, because from their side they are.
+
+## Visitor identity
+
+There are no accounts. Likes, dislikes and comment ownership hang off an
+anonymous UUID in the `nj_vid` cookie, minted by `src/proxy.ts` (the file Next
+15 and earlier called `middleware.ts`).
+
+It is a discouragement, not authentication. Clearing cookies makes you a new
+visitor, and the only thing that buys anyone is another vote.
+
+**Never identify visitors by user agent or IP.** A user agent string is shared
+by millions of people at once, so keying on it would show "you already liked
+this" to every other visitor on the same browser version. IP is barely better
+under CGNAT, and it is personal data this site otherwise never touches.
+
+Three rules keep this working:
+
+- **Server actions read the id from the cookie, never from an argument.** They
+  used to take a `visitorId` parameter, which meant anyone who observed an id
+  could delete that person's comments by passing it. Use `getVisitorId()` from
+  `lib/visitor-server.ts`.
+- **Never call `cookies()` during a page render.** It marks the whole route
+  dynamic, which drops every post out of static generation and off the CDN.
+  Actions and route handlers only.
+- **Per-visitor state cannot be server-rendered.** Post pages are prerendered
+  and the HTML is shared by everyone. "You liked this" is painted from the
+  `nj.reactions` localStorage cache on the first client render, then replaced by
+  the server's answer. That cache is display only and never a source of truth.
+
+`lib/visitor.ts` promotes a pre-cookie `nj.visitor` localStorage id into the
+cookie when it finds one, so readers who reacted before this existed keep their
+history. Do not remove that until it has been deployed long enough not to matter.
 
 ## Data
 

@@ -43,7 +43,7 @@ export function ExperienceItem({
 
 			<div className="min-w-0 flex-1 -mt-0.5">
 				<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-					<h3 className="text-sm font-semibold tracking-tight">
+					<h3 className="text-base font-semibold tracking-tight">
 						{linked ? (
 							<Link
 								href={href}
@@ -61,14 +61,14 @@ export function ExperienceItem({
 					{badges?.map((badge) => (
 						<span
 							key={badge}
-							className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground"
+							className="rounded-full border border-border px-2 py-0.5 text-[11px] uppercase tracking-wider text-muted-foreground"
 						>
 							{badge}
 						</span>
 					))}
 				</div>
 
-				<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+				<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
 					<span>{subtitle}</span>
 					<span className="text-border">·</span>
 					<span className="tabular-nums">{period}</span>
@@ -91,7 +91,7 @@ export function ExperienceItem({
 						{description.map((line) => (
 							<li
 								key={line}
-								className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground sm:text-[13px]"
+								className="flex gap-2.5 text-sm leading-relaxed text-muted-foreground sm:text-[14px]"
 							>
 								<span
 									aria-hidden

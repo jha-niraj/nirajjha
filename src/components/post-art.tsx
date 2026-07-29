@@ -20,7 +20,8 @@ export type ArtKind =
 	| "retrieval"
 	| "schema"
 	| "network"
-	| "terminal";
+	| "terminal"
+	| "backfill";
 
 const VIEWBOX = "0 0 320 180";
 
@@ -173,17 +174,20 @@ function Retrieval() {
 
 /** Entity boxes with relations drawing themselves between them. */
 function Schema() {
+	// Heights are 26 + rows * 18, so a 3-row table is 80 tall. The bottom table
+	// used to start at y=106, which put its last row at 186 and clipped it off
+	// the 180-tall viewBox. Everything here has to fit inside the box.
 	const tables = [
-		{ x: 30, y: 30, rows: 3 },
-		{ x: 196, y: 24, rows: 2 },
-		{ x: 178, y: 106, rows: 3 },
+		{ x: 30, y: 26, rows: 3 },
+		{ x: 196, y: 20, rows: 2 },
+		{ x: 178, y: 94, rows: 3 },
 	];
 
 	return (
 		<svg viewBox={VIEWBOX} fill="none" aria-hidden className="post-art-svg">
 			{[
-				"M124 54 H196",
-				"M124 78 C 150 78, 152 128, 178 128",
+				"M124 50 H196",
+				"M124 74 C 150 74, 152 116, 178 116",
 			].map((d, i) => (
 				<path
 					key={d}
@@ -346,12 +350,134 @@ function Terminal() {
 
 /* -------------------------------------------------------------------------- */
 
-const ART: Record<ArtKind, () => JSX.Element> = {
+/**
+ * A table gaining a column, filled in one batch at a time.
+ *
+ * The existing columns sit still because nothing rewrites them. The new column
+ * is drawn with a dashed rule to mark it as the one being added, and a batch
+ * window sweeps down the rows writing values into it left to right, which is
+ * what a throttled backfill actually looks like from the outside.
+ */
+function Backfill() {
+	const rows = [48, 63, 78, 93, 108, 123, 138];
+	/** x / width for the three columns that already existed. */
+	const cols = [
+		[56, 52],
+		[116, 40],
+		[164, 34],
+	];
+
+	return (
+		<svg viewBox={VIEWBOX} fill="none" aria-hidden className="post-art-svg">
+			{/* table shell */}
+			<rect
+				x="44"
+				y="22"
+				width="232"
+				height="136"
+				rx="8"
+				stroke="currentColor"
+				strokeOpacity="0.3"
+				strokeWidth="1.5"
+			/>
+			{/* header band */}
+			<path
+				d="M44 44 H276"
+				stroke="currentColor"
+				strokeOpacity="0.24"
+				strokeWidth="1.5"
+			/>
+			{[...cols, [222, 26]].map(([x, w], i) => (
+				<rect
+					key={`h${x}`}
+					x={x}
+					y="29"
+					width={i === 3 ? 26 : Math.min(w, 30)}
+					height="6"
+					rx="3"
+					fill="currentColor"
+					opacity={i === 3 ? 0.5 : 0.28}
+				/>
+			))}
+
+			{/* the rule that separates the new column from the old ones */}
+			<path
+				d="M212 22 V158"
+				stroke="currentColor"
+				strokeWidth="1.5"
+				strokeDasharray="4 4"
+				className="post-art-draw"
+			/>
+
+			{/* rows that already exist and are never rewritten */}
+			{rows.map((y, r) =>
+				cols.map(([x, w]) => (
+					<rect
+						key={`${x}-${y}`}
+						x={x}
+						y={y + 5}
+						width={r % 3 === 1 ? w - 12 : w}
+						height="6"
+						rx="3"
+						fill="currentColor"
+						opacity="0.16"
+					/>
+				))
+			)}
+
+			{/* The new column, written one batch at a time. Grouped so the
+			    reduced-motion pose can address these by position with
+			    :nth-child; :nth-of-type would count every other rect in the
+			    drawing too and dim the lot. */}
+			<g className="post-art-fills">
+				{rows.map((y, r) => (
+					<rect
+						key={`n${y}`}
+						x="222"
+						y={y + 5}
+						width={r % 2 ? 32 : 40}
+						height="6"
+						rx="3"
+						fill="currentColor"
+						className="post-art-fill"
+						style={{ ["--i" as string]: r }}
+					/>
+				))}
+			</g>
+
+			{/* the batch window sweeping down the table */}
+			<g className="post-art-sweep">
+				<rect
+					x="46"
+					y="46"
+					width="228"
+					height="19"
+					rx="4"
+					fill="currentColor"
+					opacity="0.1"
+				/>
+				<path
+					d="M46 46 H274"
+					stroke="currentColor"
+					strokeOpacity="0.5"
+					strokeWidth="1.5"
+				/>
+			</g>
+		</svg>
+	);
+}
+
+/* -------------------------------------------------------------------------- */
+
+// React 19 dropped the global `JSX` namespace, so this has to be reached
+// through React itself now.
+const ART: Record<ArtKind, () => React.JSX.Element> = {
 	pipeline: Pipeline,
 	retrieval: Retrieval,
 	schema: Schema,
 	network: Network,
 	terminal: Terminal,
+	backfill: Backfill,
 };
 
 export const ART_KINDS = Object.keys(ART) as ArtKind[];

@@ -97,7 +97,7 @@ export function TechBadge({ name }: { name: string }) {
 	const Icon = techMap[name];
 
 	return (
-		<li className="group inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-300 hover:border-foreground/25 hover:text-foreground">
+		<li className="group inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm text-muted-foreground transition-colors duration-300 hover:border-foreground/25 hover:text-foreground">
 			{Icon ? <Icon className="size-3.5 shrink-0" /> : null}
 			{name}
 		</li>
@@ -122,7 +122,7 @@ export function SkillCategory({
 }) {
 	return (
 		<div className="space-y-2.5">
-			<h3 className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">
+			<h3 className="text-[12px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">
 				{CATEGORY_LABELS[category] ?? category}
 			</h3>
 			<ul className="flex flex-wrap gap-1.5">

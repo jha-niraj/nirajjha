@@ -259,6 +259,281 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 }
 
 /* ---------------------------------------------------------------------------
+   Post embeds
+   YouTube and mermaid, planted by lib/rehype-embeds and upgraded by
+   components/post-embeds. Both are sized to breathe: they run the full width of
+   the prose column and are allowed to exceed it slightly on wide screens, so a
+   diagram or a video reads as a figure rather than an inline afterthought.
+   --------------------------------------------------------------------------- */
+
+.prose .embed {
+	margin: 2.5rem 0;
+	width: 100%;
+}
+
+@media (min-width: 1280px) {
+	/* Breaks out of the 68ch measure by a little. Text stays readable at its
+	   own width while figures get the room they need. */
+	.prose .embed {
+		width: calc(100% + 6rem);
+		margin-left: -3rem;
+		margin-right: -3rem;
+	}
+}
+
+.prose .embed-caption {
+	margin-top: 0.75rem;
+	text-align: center;
+	font-size: 0.8125rem;
+	line-height: 1.6;
+	color: hsl(var(--muted-foreground));
+}
+
+/* --- YouTube ------------------------------------------------------------- */
+
+.prose .embed-frame {
+	position: relative;
+	width: 100%;
+	/* 16/9 with the box reserved up front, so nothing shifts when the
+	   thumbnail or the iframe arrives. */
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border-radius: 0.875rem;
+	border: 1px solid hsl(var(--border));
+	background: hsl(var(--muted));
+}
+
+.prose .embed-yt-trigger {
+	display: block;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	border: 0;
+	cursor: pointer;
+	background: transparent;
+}
+
+.prose .embed-yt-thumb {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	/* YouTube thumbnails are 4:3 with letterbox bars baked in. Scaling up and
+	   cropping removes the bars and fills the 16:9 frame. */
+	object-fit: cover;
+	transform: scale(1.35);
+	transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.prose .embed-yt-trigger:hover .embed-yt-thumb {
+	transform: scale(1.42);
+}
+
+.prose .embed-yt-play {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	display: flex;
+	height: 4rem;
+	width: 4rem;
+	transform: translate(-50%, -50%);
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	/* Monochrome, not YouTube red: the site has no brand colours anywhere. */
+	background: hsl(var(--background) / 0.92);
+	color: hsl(var(--foreground));
+	padding-left: 0.2rem;
+	box-shadow: 0 8px 32px -8px rgb(0 0 0 / 0.45);
+	transition:
+		transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+		background-color 260ms ease;
+}
+
+.prose .embed-yt-trigger:hover .embed-yt-play {
+	transform: translate(-50%, -50%) scale(1.08);
+	background: hsl(var(--background));
+}
+
+.prose .embed-yt-trigger:focus-visible .embed-yt-play {
+	outline: 2px solid hsl(var(--ring));
+	outline-offset: 3px;
+}
+
+.prose .embed-yt-iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+	display: block;
+}
+
+/* --- Mermaid ------------------------------------------------------------- */
+
+.prose .mermaid-host {
+	display: block;
+	width: 100%;
+	overflow-x: auto;
+	border-radius: 0.875rem;
+	border: 1px solid hsl(var(--border));
+	background: hsl(var(--card));
+	padding: 1.75rem 1.25rem;
+	/* Enough room that the article does not jump when the SVG lands. */
+	min-height: 180px;
+}
+
+/* A diagram is only useful if its labels are readable, and the prose column is
+   deliberately narrow. On wide screens the host breaks out of that column
+   rather than scaling the text down to fit it; below that it scrolls inside
+   itself, so the page body never scrolls sideways. */
+@media (min-width: 1024px) {
+	.prose .mermaid-host {
+		width: calc(100% + 8rem);
+		margin-left: -4rem;
+		margin-right: -4rem;
+	}
+}
+
+.prose .mermaid-host[data-state="ready"] {
+	/* Fades in once drawn, so the swap from source to diagram is not a flash. */
+	animation: embed-fade-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Rendered at mermaid's natural size, not squeezed into the column: shrinking
+   the SVG shrinks its labels with it, and an unreadable diagram is worse than
+   no diagram. Anything too wide scrolls in the host above. */
+.prose .mermaid-host svg {
+	display: block;
+	margin: 0 auto;
+	max-width: none;
+	height: auto;
+}
+
+/* The source is the no-JavaScript fallback and the input the renderer reads
+   back. Once a diagram is drawn it is replaced outright. */
+.prose .mermaid-source {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	font-size: 0.8125rem;
+	line-height: 1.7;
+	color: hsl(var(--muted-foreground));
+	white-space: pre;
+	overflow-x: auto;
+}
+
+.prose .mermaid-host[data-state="error"] {
+	border-style: dashed;
+}
+
+@keyframes embed-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.prose .embed-yt-thumb,
+	.prose .embed-yt-play {
+		transition: none;
+	}
+	.prose .embed-yt-trigger:hover .embed-yt-thumb {
+		transform: scale(1.35);
+	}
+	.prose .mermaid-host[data-state="ready"] {
+		animation: none;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Dialog
+   Radix unmounts content as soon as it closes, so the exit animation has to be
+   CSS driven off `data-state` rather than a JS spring that would be cut short.
+   --------------------------------------------------------------------------- */
+
+@keyframes dialog-overlay-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes dialog-overlay-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+/* Grows out of the centre point rather than sliding in from an edge. The
+   translate stays fixed at -50%/-50% through every frame, so the panel's middle
+   never moves and only the scale changes. Any drift on the translate would read
+   as the panel arriving from a direction. */
+@keyframes dialog-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.82);
+	}
+	60% {
+		opacity: 1;
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+}
+
+@keyframes dialog-out {
+	from {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.9);
+	}
+}
+
+.animate-dialog-overlay-in {
+	animation: dialog-overlay-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-dialog-overlay-out {
+	animation: dialog-overlay-out 140ms ease-in forwards;
+}
+
+.animate-dialog-in {
+	/* Slight overshoot, so it settles rather than stopping dead. */
+	animation: dialog-in 260ms cubic-bezier(0.34, 1.42, 0.64, 1);
+}
+
+.animate-dialog-out {
+	animation: dialog-out 140ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* Keep the fade so the panel still reads as arriving, drop the movement.
+	   The transform stays applied because it is what centres the panel. */
+	.animate-dialog-in,
+	.animate-dialog-out {
+		animation-name: dialog-overlay-in;
+	}
+	.animate-dialog-out {
+		animation-name: dialog-overlay-out;
+	}
+}
+
+/* ---------------------------------------------------------------------------
    Post artwork
    Animated SVG that stands in for a cover photo. Every keyframe below is
    switched off under prefers-reduced-motion, where each piece settles into a
@@ -496,6 +771,52 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	}
 }
 
+/* Backfill: values written into the new column, left to right, one row at a
+   time, with a batch window sweeping down behind them. */
+.post-art-fill {
+	opacity: 0.06;
+	transform-box: fill-box;
+	transform-origin: left center;
+	animation: art-fill var(--art-dur) ease-out infinite;
+	animation-delay: calc(var(--i, 0) * 0.55s);
+}
+
+@keyframes art-fill {
+	0% {
+		opacity: 0.06;
+		transform: scaleX(0.12);
+	}
+	12%,
+	80% {
+		opacity: 0.5;
+		transform: scaleX(1);
+	}
+	94%,
+	100% {
+		opacity: 0.06;
+		transform: scaleX(0.12);
+	}
+}
+
+.post-art-sweep {
+	animation: art-sweep var(--art-dur) linear infinite;
+}
+
+@keyframes art-sweep {
+	0% {
+		transform: translateY(0);
+		opacity: 0;
+	}
+	8% {
+		opacity: 1;
+	}
+	78%,
+	100% {
+		transform: translateY(90px);
+		opacity: 0;
+	}
+}
+
 /* Hovering a card leans the whole piece forward slightly. */
 .group:hover .post-art-svg {
 	transform: scale(1.04);
@@ -515,7 +836,9 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	.post-art-link,
 	.post-art-pulse,
 	.post-art-type,
-	.post-art-caret {
+	.post-art-caret,
+	.post-art-fill,
+	.post-art-sweep {
 		animation: none !important;
 	}
 
@@ -551,7 +874,213 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	.post-art-caret {
 		opacity: 0.7;
 	}
+	/* Backfill parked mid-run: the first rows written, the window resting on
+	   the row it would be working, the rest still empty. */
+	.post-art-fill {
+		opacity: 0.5;
+		transform: scaleX(1);
+	}
+	.post-art-fills rect:nth-child(n + 5) {
+		opacity: 0.1;
+	}
+	.post-art-sweep {
+		transform: translateY(60px);
+		opacity: 1;
+	}
 	.post-art-svg {
 		transition: none;
+	}
+}
+
+/* ── Animated theme switch (View Transitions API) ──────────────────────────── */
+
+/* The provider runs with disableTransitionOnChange, which kills CSS transitions
+   at the moment of the switch. That is deliberate: it stops the whole page
+   slow-fading on load. It also means this keyframe, driven by the View
+   Transitions API, is the only thing that can animate a theme change. */
+
+@keyframes vt-theme-reveal {
+	/* inset(top right bottom left): the far edge starts collapsed at 100% and
+	   opens to 0, so the new theme sweeps in as a straight vertical edge. */
+	from {
+		clip-path: var(--vt-clip-from, inset(0 100% 0 0));
+	}
+	to {
+		clip-path: inset(0 0 0 0);
+	}
+}
+
+/* Reveal: the new theme wipes in over a static snapshot of the old one.
+   mix-blend-mode must be forced to normal. The UA default is plus-lighter,
+   which ADDS both snapshots' colours inside the revealed strip and flashes
+   bright, worst going dark to light. */
+html[data-theme-transition="reveal"]::view-transition-old(root),
+html[data-theme-transition="reveal"]::view-transition-new(root) {
+	mix-blend-mode: normal;
+}
+
+html[data-theme-transition="reveal"]::view-transition-old(root) {
+	animation: none;
+	z-index: 0;
+}
+
+html[data-theme-transition="reveal"]::view-transition-new(root) {
+	animation: vt-theme-reveal 0.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+	z-index: 1;
+}
+
+/* Fade: no click origin, so there is no sensible direction to wipe from. */
+html[data-theme-transition="fade"]::view-transition-old(root),
+html[data-theme-transition="fade"]::view-transition-new(root) {
+	animation-duration: 0.3s;
+}
+
+/* backdrop-filter cannot be captured in a snapshot, so a blurred surface
+   renders live over both and hard-flashes. Strip blur for the duration, and
+   force anything tagged as glass to a solid background. */
+html[data-theme-transition] *,
+html[data-theme-transition] *::before,
+html[data-theme-transition] *::after {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+
+html[data-theme-transition] .theme-vt-glass {
+	background-color: hsl(var(--background)) !important;
+}
+
+/* The switch still happens under reduced motion, it just does not sweep. */
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-group(*),
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none !important;
+	}
+}
+
+/* ── Footer signature: chromatic-split glitch on hover ─────────────────────── */
+
+/* Three stacked copies of one string. The offset layers come from
+   content: attr(data-text), so the text itself exists once in the DOM and a
+   screen reader announces it once. Pseudo-elements are never announced. */
+
+.signature-glitch {
+	position: relative;
+	display: inline-block;
+	isolation: isolate;
+	/* The layers sit exactly on top, so the element must not collapse to the
+	   union of three offset boxes. */
+	white-space: nowrap;
+}
+
+.signature-glitch::before,
+.signature-glitch::after {
+	content: attr(data-text);
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	opacity: 0;
+	/* No colour: the palette is achromatic, so the split reads through offset
+	   and opacity instead of the usual red/cyan fringing. */
+	color: hsl(var(--foreground));
+	transition: opacity 180ms ease;
+}
+
+.signature-glitch:hover::before,
+.signature-glitch:focus-visible::before {
+	opacity: 0.55;
+	animation: signature-split-a 900ms steps(2, end) infinite;
+}
+
+.signature-glitch:hover::after,
+.signature-glitch:focus-visible::after {
+	opacity: 0.4;
+	animation: signature-split-b 900ms steps(2, end) infinite;
+}
+
+/* The base layer jitters a fraction of the offset copies, which keeps the word
+   readable while the edges tear. */
+.signature-glitch:hover,
+.signature-glitch:focus-visible {
+	animation: signature-jitter 900ms steps(2, end) infinite;
+}
+
+@keyframes signature-split-a {
+	0%,
+	100% {
+		transform: translate(0, 0);
+		clip-path: inset(0 0 62% 0);
+	}
+	20% {
+		transform: translate(-2px, -1px);
+		clip-path: inset(0 0 62% 0);
+	}
+	40% {
+		transform: translate(2px, 1px);
+		clip-path: inset(48% 0 22% 0);
+	}
+	60% {
+		transform: translate(-1px, 1px);
+		clip-path: inset(18% 0 54% 0);
+	}
+	80% {
+		transform: translate(1px, -1px);
+		clip-path: inset(70% 0 0 0);
+	}
+}
+
+@keyframes signature-split-b {
+	0%,
+	100% {
+		transform: translate(0, 0);
+		clip-path: inset(66% 0 0 0);
+	}
+	20% {
+		transform: translate(2px, 1px);
+		clip-path: inset(66% 0 0 0);
+	}
+	40% {
+		transform: translate(-2px, -1px);
+		clip-path: inset(26% 0 46% 0);
+	}
+	60% {
+		transform: translate(1px, -1px);
+		clip-path: inset(58% 0 14% 0);
+	}
+	80% {
+		transform: translate(-1px, 1px);
+		clip-path: inset(0 0 76% 0);
+	}
+}
+
+@keyframes signature-jitter {
+	0%,
+	100% {
+		transform: translate(0, 0);
+	}
+	40% {
+		transform: translate(0.5px, -0.5px);
+	}
+	70% {
+		transform: translate(-0.5px, 0.5px);
+	}
+}
+
+/* A glitch is exactly the kind of motion this is meant to suppress. The
+   signature still lifts to full contrast so hover stays legible as a state. */
+@media (prefers-reduced-motion: reduce) {
+	.signature-glitch:hover,
+	.signature-glitch:focus-visible,
+	.signature-glitch:hover::before,
+	.signature-glitch:focus-visible::before,
+	.signature-glitch:hover::after,
+	.signature-glitch:focus-visible::after {
+		animation: none;
+	}
+	.signature-glitch:hover::before,
+	.signature-glitch:focus-visible::before,
+	.signature-glitch:hover::after,
+	.signature-glitch:focus-visible::after {
+		opacity: 0;
 	}
 }

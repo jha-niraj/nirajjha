@@ -40,7 +40,7 @@ function Placeholder({ title }: { title: string }) {
 		<div className="flex h-full w-full items-center justify-center bg-muted">
 			<span
 				aria-hidden
-				className="text-3xl font-semibold tracking-tight text-muted-foreground/50"
+				className="text-4xl font-semibold tracking-tight text-muted-foreground/50"
 			>
 				{initials}
 			</span>
@@ -104,7 +104,7 @@ export function ProjectCard({
 			<div className="flex flex-1 flex-col gap-3 p-4">
 				<div className="space-y-1">
 					<div className="flex items-start justify-between gap-3">
-						<h3 className="text-sm font-semibold tracking-tight">
+						<h3 className="text-base font-semibold tracking-tight">
 							{linked ? (
 								<Link
 									href={href}
@@ -119,15 +119,15 @@ export function ProjectCard({
 								title
 							)}
 						</h3>
-						<span className="shrink-0 pt-0.5 text-[10px] tabular-nums text-muted-foreground">
+						<span className="shrink-0 pt-0.5 text-[11px] tabular-nums text-muted-foreground">
 							{dates}
 						</span>
 					</div>
 					{tagline && (
-						<p className="text-xs text-muted-foreground">
+						<p className="text-sm text-muted-foreground">
 							{tagline}
 							{active ? (
-								<span className="ml-2 text-[10px] uppercase tracking-wider text-foreground/70">
+								<span className="ml-2 text-[11px] uppercase tracking-wider text-foreground/70">
 									· Live
 								</span>
 							) : null}
@@ -135,7 +135,7 @@ export function ProjectCard({
 					)}
 				</div>
 
-				<p className="text-pretty text-xs leading-relaxed text-muted-foreground">
+				<p className="text-pretty text-sm leading-relaxed text-muted-foreground">
 					{description}
 				</p>
 
@@ -144,7 +144,7 @@ export function ProjectCard({
 						{highlights.map((h) => (
 							<li
 								key={h}
-								className="flex gap-2 text-[11px] leading-relaxed text-muted-foreground"
+								className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground"
 							>
 								<span
 									aria-hidden
@@ -162,7 +162,7 @@ export function ProjectCard({
 							{tags.map((tag) => (
 								<li
 									key={tag}
-									className="rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+									className="rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground"
 								>
 									{tag}
 								</li>
@@ -178,7 +178,7 @@ export function ProjectCard({
 									href={link.href}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-2.5 py-1 text-[10px] font-medium text-background transition-opacity hover:opacity-85"
+									className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-2.5 py-1 text-[11px] font-medium text-background transition-opacity hover:opacity-85"
 								>
 									{link.icon}
 									{link.type}

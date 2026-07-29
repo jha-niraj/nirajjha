@@ -13,12 +13,16 @@ import {
 	EMPTY_ENGAGEMENT,
 } from "@/db/queries";
 import { getPostSlugs } from "@/lib/slugs";
+import { getVisitorId } from "@/lib/visitor-server";
 
 /**
  * Server actions are a public HTTP surface. Everything crossing this boundary
  * is treated as hostile: slugs are checked against the posts that actually
- * exist, visitor ids must look like the UUIDs we mint, and free text is length
- * capped before it reaches the database.
+ * exist, and free text is length capped before it reaches the database.
+ *
+ * The visitor id is no longer a parameter. It comes from the request cookie, so
+ * a caller cannot name someone else's id and act as them; previously anyone who
+ * learned an id could delete that person's comments by passing it here.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,19 +35,12 @@ async function assertKnownSlug(slug: string) {
 	if (!slugs.has(slug)) throw new Error("Unknown post");
 }
 
-function assertVisitor(visitorId: string) {
-	if (!UUID.test(visitorId)) throw new Error("Invalid visitor");
-}
-
-export async function trackView(
-	slug: string,
-	visitorId: string
-): Promise<PostEngagement> {
+export async function trackView(slug: string): Promise<PostEngagement> {
 	try {
 		await assertKnownSlug(slug);
-		assertVisitor(visitorId);
+		const visitorId = await getVisitorId();
 		await recordView(slug);
-		return await getEngagement(slug, visitorId);
+		return await getEngagement(slug, visitorId ?? undefined);
 	} catch {
 		// A dead database must never break reading the post.
 		return EMPTY_ENGAGEMENT;
@@ -52,24 +49,26 @@ export async function trackView(
 
 export async function react(
 	slug: string,
-	visitorId: string,
 	reaction: ReactionKind
 ): Promise<PostEngagement> {
 	await assertKnownSlug(slug);
-	assertVisitor(visitorId);
 	if (reaction !== "like" && reaction !== "dislike") {
 		throw new Error("Invalid reaction");
 	}
+
+	const visitorId = await getVisitorId();
+	// No cookie means middleware never ran, which in practice means a client
+	// that blocks them. Reading still works; voting does not.
+	if (!visitorId) throw new Error("No visitor session");
+
 	return setReaction(slug, visitorId, reaction);
 }
 
-export async function loadComments(
-	slug: string,
-	visitorId: string
-): Promise<CommentNode[]> {
+export async function loadComments(slug: string): Promise<CommentNode[]> {
 	try {
 		await assertKnownSlug(slug);
-		return await getComments(slug, UUID.test(visitorId) ? visitorId : undefined);
+		const visitorId = await getVisitorId();
+		return await getComments(slug, visitorId ?? undefined);
 	} catch {
 		return [];
 	}
@@ -84,11 +83,17 @@ export async function postComment(input: {
 	parentId: string | null;
 	authorName: string;
 	body: string;
-	visitorId: string;
 }): Promise<PostCommentResult> {
 	try {
 		await assertKnownSlug(input.slug);
-		assertVisitor(input.visitorId);
+
+		const visitorId = await getVisitorId();
+		if (!visitorId) {
+			return {
+				ok: false,
+				error: "Could not identify your session. Check that cookies are enabled.",
+			};
+		}
 
 		const authorName = input.authorName.trim().slice(0, MAX_NAME);
 		const body = input.body.trim().slice(0, MAX_BODY);
@@ -108,7 +113,7 @@ export async function postComment(input: {
 			parentId: input.parentId,
 			authorName,
 			body,
-			visitorId: input.visitorId,
+			visitorId,
 		});
 
 		return { ok: true, comments };
@@ -122,14 +127,16 @@ export async function postComment(input: {
 
 export async function removeComment(
 	slug: string,
-	id: string,
-	visitorId: string
+	id: string
 ): Promise<CommentNode[]> {
 	await assertKnownSlug(slug);
-	assertVisitor(visitorId);
 	if (!UUID.test(id)) throw new Error("Invalid comment");
-	// deleteComment scopes the update to this visitor's own rows, so a stolen
-	// id cannot delete somebody else's comment.
+
+	const visitorId = await getVisitorId();
+	if (!visitorId) throw new Error("No visitor session");
+
+	// deleteComment scopes the update to this visitor's own rows, so the cookie
+	// is what decides ownership rather than anything the caller sent.
 	await deleteComment(id, visitorId);
 	return getComments(slug, visitorId);
 }

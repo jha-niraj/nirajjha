@@ -1,4 +1,5 @@
 import { DATA } from "@/data/resume";
+import { Signature } from "@/components/signature";
 import Link from "next/link";
 
 export function SiteFooter() {
@@ -6,11 +7,12 @@ export function SiteFooter() {
 
 	return (
 		<footer className="mt-24 border-t border-border pt-6">
-			<div className="flex flex-col gap-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-				<p>
-					© {year} {DATA.name}. Built with Next.js.
+			<div className="flex flex-col gap-4 text-base text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+				<p className="flex items-center gap-1.5">
+					<span>© {year}</span>
+					<Signature className="text-lg font-medium italic text-foreground" />
 				</p>
-				<nav className="flex flex-wrap items-center gap-x-4 gap-y-2">
+				<nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
 					<Link href="/" className="transition-colors hover:text-foreground">
 						Home
 					</Link>

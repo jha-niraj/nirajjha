@@ -1,6 +1,12 @@
 "use client";
 
-import { AnimatePresence, motion, useInView, Variants } from "framer-motion";
+import {
+	AnimatePresence,
+	motion,
+	useInView,
+	useReducedMotion,
+	Variants,
+} from "framer-motion";
 import { useRef } from "react";
 
 interface BlurFadeProps {
@@ -30,16 +36,27 @@ const BlurFade = ({
 	blur = "6px",
 }: BlurFadeProps) => {
 	const ref = useRef(null);
+	const reduced = useReducedMotion();
 	const inViewResult = useInView(ref, {
 		once: true,
 		margin: inViewMargin as any,
 	});
 	const isInView = !inView || inViewResult;
 
-	const defaultVariants: Variants = {
-		hidden: { y: yOffset, opacity: 0, filter: `blur(${blur})` },
-		visible: { y: -yOffset, opacity: 1, filter: `blur(0px)` },
-	};
+	// Reduced motion keeps the fade, which is what signals "this arrived", and
+	// drops the travel and the blur, which are the parts that cause trouble.
+	const defaultVariants: Variants = reduced
+		? {
+				hidden: { opacity: 0 },
+				visible: { opacity: 1 },
+			}
+		: {
+				hidden: { y: yOffset, opacity: 0, filter: `blur(${blur})` },
+				// Settles at 0, not -yOffset. Ending on a non-zero offset left every
+				// animated block sitting slightly above where the layout put it, and
+				// the gap compounded down a page of stacked sections.
+				visible: { y: 0, opacity: 1, filter: `blur(0px)` },
+			};
 
 	const combinedVariants = variant || defaultVariants;
 
@@ -53,7 +70,7 @@ const BlurFade = ({
 				variants={combinedVariants}
 				transition={{
 					delay: 0.04 + delay,
-					duration,
+					duration: reduced ? 0.15 : duration,
 					ease: "easeOut",
 				}}
 				className={className}

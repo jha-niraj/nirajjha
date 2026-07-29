@@ -1,6 +1,6 @@
 import BlurFade from "@/components/magicui/blur-fade";
 import { ProjectCard } from "@/components/project-card";
-import { DATA } from "@/data/resume";
+import { DATA, VISIBLE_PROJECTS } from "@/data/resume";
 
 const DELAY = 0.04;
 
@@ -11,7 +11,7 @@ const DELAY = 0.04;
 export function ProjectsSection() {
 	return (
 		<ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-			{DATA.projects.map((project, i) => (
+			{VISIBLE_PROJECTS.map((project, i) => (
 				<li key={project.title} className="flex">
 					<BlurFade delay={DELAY * (i + 1)} inView className="flex w-full">
 						<ProjectCard

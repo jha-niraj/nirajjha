@@ -15,9 +15,10 @@ export async function generateStaticParams() {
 export default async function PostOpengraphImage({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }) {
-	const post = await getPost(params.slug);
+	const { slug } = await params;
+	const post = await getPost(slug);
 	const title = post?.metadata.title ?? "Blog";
 	const tags = post?.metadata.tags.slice(0, 3) ?? [];
 

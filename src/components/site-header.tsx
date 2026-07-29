@@ -16,11 +16,11 @@ export function SiteHeader() {
 	const pathname = usePathname();
 
 	return (
-		<header className="sticky top-0 z-40 -mx-5 mb-14 border-b border-border/70 bg-background/80 px-5 backdrop-blur-md sm:-mx-8 sm:px-8">
+		<header className="theme-vt-glass sticky top-0 z-40 -mx-5 mb-14 border-b border-border/70 bg-background/80 px-5 backdrop-blur-md sm:-mx-8 sm:px-8">
 			<div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-6">
 				<Link
 					href="/"
-					className="group flex items-center gap-2.5 text-sm font-semibold tracking-tight"
+					className="group flex items-center gap-2.5 text-base font-semibold tracking-tight"
 				>
 					<Image
 						src={DATA.avatarUrl}
@@ -48,7 +48,7 @@ export function SiteHeader() {
 								href={item.href}
 								aria-current={active ? "page" : undefined}
 								className={cn(
-									"rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+									"rounded-full px-3.5 py-1.5 text-base font-medium transition-colors",
 									active
 										? "bg-foreground text-background"
 										: "text-muted-foreground hover:text-foreground"

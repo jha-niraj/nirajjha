@@ -5,8 +5,8 @@ import { DATA } from "@/data/resume";
 import { getCommentCounts, getViewCounts } from "@/db/queries";
 import type { PostSummary } from "@/lib/post-types";
 import { buildBlogIndexGraph } from "@/lib/schema";
-import { SubscribeForm } from "@/components/subscribe-form";
-import { Mail, Rss } from "lucide-react";
+import { SubscribeButton } from "@/components/subscribe-form";
+import { Rss } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -59,6 +59,7 @@ export default async function BlogPage() {
 		publishedAt: p.metadata.publishedAt,
 		readingTime: p.readingTime,
 		tags: p.metadata.tags,
+		category: p.metadata.category,
 		art: p.metadata.art,
 		featured: p.metadata.featured,
 		outline: p.headings.map((h) => h.text),
@@ -93,10 +94,10 @@ export default async function BlogPage() {
 				<BlurFade delay={0.04}>
 					<header className="mb-10 flex flex-col gap-5 border-b border-border pb-10 sm:flex-row sm:items-end sm:justify-between">
 						<div>
-							<h1 className="text-4xl font-semibold tracking-tighter sm:text-5xl">
+							<h1 className="text-5xl font-semibold tracking-tighter sm:text-6xl">
 								Blog
 							</h1>
-							<p className="mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
+							<p className="mt-3 max-w-xl text-lg leading-relaxed text-muted-foreground">
 								Things I worked out the hard way while building AI products
 								and full-stack systems. Architecture decisions, retrieval,
 								and what held up after launch.
@@ -105,19 +106,14 @@ export default async function BlogPage() {
 						{/* "Subscribe" means the email list. It used to point at
 						    /feed.xml, which dumped raw RSS XML on anyone who clicked
 						    it. RSS is still offered, but labelled as RSS and marked
-						    external so nobody expects an email signup. */}
+						    external so nobody expects an email signup. The signup
+						    itself opens in a dialog rather than sitting on the page. */}
 						<div className="flex w-fit shrink-0 items-center gap-2">
-							<a
-								href="#subscribe"
-								className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-85"
-							>
-								<Mail className="size-3.5" />
-								Subscribe
-							</a>
+							<SubscribeButton source="blogs-index" />
 							<Link
 								href="/feed.xml"
 								prefetch={false}
-								className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+								className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-base font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
 								title="RSS feed (XML, for feed readers)"
 							>
 								<Rss className="size-3.5" />
@@ -128,10 +124,6 @@ export default async function BlogPage() {
 				</BlurFade>
 
 				<BlurFade delay={0.08}>
-					<SubscribeForm source="blogs-index" className="mb-10" />
-				</BlurFade>
-
-				<BlurFade delay={0.12}>
 					<BlogExplorer posts={summaries} tags={tags} />
 				</BlurFade>
 			</main>

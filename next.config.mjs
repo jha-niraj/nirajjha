@@ -32,19 +32,23 @@ const nextConfig = {
 		];
 	},
 
+	// shiki ships ESM with top-level await, which the minifier cannot parse once
+	// the bundler has wrapped it. It only ever runs on the server during the MDX
+	// render, so keep it out of the bundle entirely.
+	//
+	// This was `experimental.serverComponentsExternalPackages` on Next 14. It
+	// graduated to a top-level option and the old key is no longer read, so
+	// leaving it nested would have silently stopped excluding anything.
+	serverExternalPackages: [
+		"shiki",
+		"rehype-pretty-code",
+		"@neondatabase/serverless",
+	],
+
 	experimental: {
 		// react-icons and lucide-react are barrel files; without this every icon
 		// import drags a large chunk of the package into the bundle.
 		optimizePackageImports: ["react-icons", "lucide-react"],
-
-		// shiki ships ESM with top-level await, which Terser cannot parse once
-		// webpack has wrapped it. It only ever runs on the server during the
-		// MDX render, so keep it out of the bundle entirely.
-		serverComponentsExternalPackages: [
-			"shiki",
-			"rehype-pretty-code",
-			"@neondatabase/serverless",
-		],
 	},
 };
 

@@ -1,12 +1,15 @@
 import { Comments } from "@/components/comments";
+import BlurFade from "@/components/magicui/blur-fade";
 import { PostEngagementBar } from "@/components/post-engagement";
 import { PostArt } from "@/components/post-art";
-import { SubscribeForm } from "@/components/subscribe-form";
+import { PostEmbeds } from "@/components/post-embeds";
+import { SubscribeButton } from "@/components/subscribe-form";
 import { PostCard } from "@/components/post-card";
 import { TableOfContents } from "@/components/toc";
 import { getBlogPosts, getPost } from "@/data/blog";
 import { DATA } from "@/data/resume";
 import { getComments, getEngagement } from "@/db/queries";
+import { categoryLabel } from "@/lib/categories";
 import type { PostSummary } from "@/lib/post-types";
 import { buildPostGraph } from "@/lib/schema";
 import { formatShortDate } from "@/lib/utils";
@@ -29,12 +32,18 @@ export async function generateStaticParams() {
 	return posts.map((post) => ({ slug: post.slug }));
 }
 
+/**
+ * `params` is a Promise from Next 15 onward. Awaiting it is not optional: the
+ * synchronous shape is gone, so reading `params.slug` directly now yields
+ * undefined and every post 404s.
+ */
 export async function generateMetadata({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-	const post = await getPost(params.slug);
+	const { slug } = await params;
+	const post = await getPost(slug);
 	if (!post) return {};
 
 	const { title, summary, publishedAt, updatedAt, image, tags } = post.metadata;
@@ -73,9 +82,10 @@ export async function generateMetadata({
 export default async function PostPage({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }) {
-	const post = await getPost(params.slug);
+	const { slug } = await params;
+	const post = await getPost(slug);
 	if (!post) notFound();
 
 	const all = await getBlogPosts();
@@ -93,6 +103,7 @@ export default async function PostPage({
 			publishedAt: p.metadata.publishedAt,
 			readingTime: p.readingTime,
 			tags: p.metadata.tags,
+			category: p.metadata.category,
 			art: p.metadata.art,
 			featured: p.metadata.featured,
 			outline: [],
@@ -121,73 +132,110 @@ export default async function PostPage({
 			/>
 
 			<main className="pb-8">
-				<Link
-					href="/blogs"
-					className="group mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-				>
-					<ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
-					All posts
-				</Link>
+				<BlurFade delay={0.04}>
+					<Link
+						href="/blogs"
+						className="group mb-8 inline-flex items-center gap-1.5 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
+					>
+						<ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
+						All posts
+					</Link>
+				</BlurFade>
 
 				<header className="mb-10">
-					<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-						<time dateTime={post.metadata.publishedAt}>
-							{formatShortDate(post.metadata.publishedAt)}
-						</time>
-						<span className="text-border">/</span>
-						<span>{post.readingTime} min read</span>
-						{post.metadata.tags.map((tag) => (
-							<span key={tag} className="contents">
-								<span className="text-border">/</span>
-								<span>{tag}</span>
-							</span>
-						))}
-					</div>
+					<BlurFade delay={0.08}>
+						<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+							{post.metadata.category && (
+								<>
+									<span className="rounded-full border border-border px-2.5 py-0.5 text-foreground">
+										{categoryLabel(post.metadata.category)}
+									</span>
+									<span className="text-border">/</span>
+								</>
+							)}
+							<time dateTime={post.metadata.publishedAt}>
+								{formatShortDate(post.metadata.publishedAt)}
+							</time>
+							<span className="text-border">/</span>
+							<span>{post.readingTime} min read</span>
+							{post.metadata.tags.map((tag) => (
+								<span key={tag} className="contents">
+									<span className="text-border">/</span>
+									<span>{tag}</span>
+								</span>
+							))}
+						</div>
+					</BlurFade>
 
-					<h1 className="mt-4 max-w-4xl text-balance text-4xl font-semibold leading-[1.1] tracking-tighter sm:text-5xl">
-						{post.metadata.title}
-					</h1>
+					<BlurFade delay={0.12}>
+						<h1 className="mt-4 max-w-4xl text-balance text-5xl font-semibold leading-[1.1] tracking-tighter sm:text-6xl">
+							{post.metadata.title}
+						</h1>
+					</BlurFade>
 
-					<p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-						{post.metadata.summary}
-					</p>
+					<BlurFade delay={0.16}>
+						<p className="mt-5 max-w-2xl text-xl leading-relaxed text-muted-foreground">
+							{post.metadata.summary}
+						</p>
+					</BlurFade>
 
-					<div className="mt-8 aspect-[21/9] w-full overflow-hidden rounded-2xl border border-border">
-						<PostArt art={post.metadata.art} slug={post.slug} />
-					</div>
+					<BlurFade delay={0.2}>
+						{/* 16/9 matches the art's 320x180 viewBox exactly. At 21/9 the
+						    SVG was letterboxed: it fitted to width and left a dead band
+						    above and below, which is why the frame looked mostly empty. */}
+						<div className="mt-8 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border">
+							<PostArt art={post.metadata.art} slug={post.slug} />
+						</div>
+					</BlurFade>
 				</header>
 
 				{/* Contents rail on the left, article on the right. Below lg the
 				    rail collapses above the article and stops being sticky. */}
 				<div className="grid gap-10 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-14">
 					<aside className="lg:order-1">
-						<TableOfContents headings={post.headings} />
+						<BlurFade delay={0.24}>
+							<TableOfContents headings={post.headings} />
+						</BlurFade>
 					</aside>
 
 					<div className="min-w-0 lg:order-2">
-						<article
-							className="prose max-w-[68ch]"
-							dangerouslySetInnerHTML={{ __html: post.source }}
-						/>
+						<BlurFade delay={0.24}>
+							<article
+								className="prose max-w-[68ch]"
+								dangerouslySetInnerHTML={{ __html: post.source }}
+							/>
+						</BlurFade>
+						{/* Upgrades the YouTube and mermaid placeholders inside the
+						    article above. Renders no markup of its own. */}
+						<PostEmbeds />
 
-						<div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-8">
-							<PostEngagementBar slug={post.slug} initial={engagement} />
-							<p className="text-sm text-muted-foreground">
-								Written by{" "}
-								<Link
-									href="/"
-									className="font-medium text-foreground underline underline-offset-4"
-								>
-									{DATA.shortName}
-								</Link>
-							</p>
-						</div>
+						<BlurFade delay={0.06} inView>
+							<div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-8">
+								<PostEngagementBar slug={post.slug} initial={engagement} />
+								<p className="text-base text-muted-foreground">
+									Written by{" "}
+									<Link
+										href="/"
+										className="font-medium text-foreground underline underline-offset-4"
+									>
+										{DATA.shortName}
+									</Link>
+								</p>
+							</div>
+						</BlurFade>
 
 						<div className="max-w-[68ch]">
-							<SubscribeForm
-								source={`post:${post.slug}`}
-								className="mt-10"
-							/>
+							{/* One line instead of the card that used to sit here. The
+							    form itself is in the dialog the button opens. */}
+							<div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border px-5 py-4">
+								<p className="text-base text-muted-foreground">
+									Liked this? Get new posts by email.
+								</p>
+								<SubscribeButton
+									source={`post:${post.slug}`}
+									className="px-3.5 py-1.5 text-sm"
+								/>
+							</div>
 							<Comments slug={post.slug} initial={comments} />
 						</div>
 					</div>
@@ -195,13 +243,21 @@ export default async function PostPage({
 
 				{related.length > 0 && (
 					<section className="mt-24 border-t border-border pt-10">
-						<h2 className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-							Keep reading
-						</h2>
+						<BlurFade delay={0.04} inView>
+							<h2 className="mb-6 text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+								Keep reading
+							</h2>
+						</BlurFade>
 						<ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-							{related.map((p) => (
-								<li key={p.slug}>
-									<PostCard post={p} />
+							{related.map((p, i) => (
+								<li key={p.slug} className="flex">
+									<BlurFade
+										delay={0.08 + i * 0.06}
+										inView
+										className="flex w-full"
+									>
+										<PostCard post={p} />
+									</BlurFade>
 								</li>
 							))}
 						</ul>
