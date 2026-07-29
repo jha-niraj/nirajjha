@@ -1,0 +1,180 @@
+---
+title: "Hello, I'm Niraj"
+publishedAt: "2026-07-29"
+summary: "I build AI products end to end at Creatr: email pipelines on Gmail webhooks, M365 integrations, and retrieval systems that survive production. Here is everything I have shipped, and the four things I got wrong before I got them right."
+art: "pipeline"
+category: "Engineering"
+kind: "essay"
+tags: ["Introduction", "Engineering", "AI"]
+featured: true
+draft: false
+---
+
+I'm Niraj Kumar Jha. I'm a Full Stack Engineer at [Creatr](https://getcreatr.com), and I spend most of my week in the least glamorous part of AI products: the pipelines, the integrations, and the guardrails that decide whether a feature is a demo or something a business can actually run on.
+
+This is the first thing I have written here, so it should explain who is writing, what I have shipped, and what I have learned the hard way. It is longer than an introduction needs to be. That is deliberate. I would rather you leave knowing whether the next post is worth your time.
+
+## What I'm building at Creatr
+
+[Creatr](https://getcreatr.com) is a managed development service. Founders describe a product in plain English, and the build system, DeepBuild, ships a deployed application with a real database, authentication, third-party integrations, and production infrastructure. My work sits inside that build system.
+
+### An email pipeline that a human still signs off
+
+The piece I am most attached to is an AI email pipeline built on [Gmail push notifications](https://developers.google.com/workspace/gmail/api/guides/push). The flow:
+
+1. A form submission arrives and fires a webhook.
+2. An intelligence module decides which sender identity it should go out as.
+3. The system gathers evidence about the recipient before writing anything.
+4. [Claude](https://claude.com/product/overview) drafts an on-brand email in about a minute.
+5. An admin approves it. Only then does it send.
+6. Opens come back through a tracking pixel.
+
+Step five is the whole design. A model that drafts an email is a product. A model that sends one is a liability. I will come back to that.
+
+### Integrations, which is where the time actually goes
+
+I built the DeepBuild core modules and the reusable integration packages that sit on top: Gmail webhooks, email tracking, and full [Microsoft 365 through Graph](https://learn.microsoft.com/en-us/graph/overview) covering auth, mail, and calendar. On the managed-service-provider side I own the integration and onboarding surface end to end, including M365 email and license provisioning, plus [Atera](https://www.atera.com) and [Freshdesk](https://www.freshworks.com/freshdesk/).
+
+Integration work has a reputation for being boring. It is not. Every one of these APIs has its own idea of pagination, its own rate limits, and its own creative interpretation of what an error means. The interesting engineering is in the failure paths, not the happy path.
+
+Part of that surface is a self-healing agent that handles routine software tasks on its own and falls back to a human-review proposal the moment it is not confident. That fallback is the feature.
+
+### Retrieval instead of a bigger context window
+
+I also built a long-form report pipeline. Uploaded documents are embedded, and Claude pulls the section it needs while it writes, rather than trying to hold a two-hundred-page brief in one context window.
+
+This is [retrieval-augmented generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation), the pattern from [Lewis et al., 2020](https://arxiv.org/abs/2005.11401), applied to a boring business problem. If you want the mechanics, Anthropic's [embeddings guide](https://platform.claude.com/docs/en/build-with-claude/embeddings) is a good starting point.
+
+Alongside it there is a guarded product assistant with multi-layer checks on every write action. It can read almost anything. What it can change is a much shorter list.
+
+## Before Creatr
+
+### EventEye, founding engineer
+
+From June 2025 to February 2026 I was the founding engineer at EventEye, an event management and discovery platform. Empty repository to more than 15,000 users.
+
+I designed the backend for event listings, ticketing, and team-based registrations, plus admin dashboards, real-time workflows, secure payment flows, and queue-backed certification pipelines. Certificates are a good example of why background workers exist: generating a few thousand PDFs is not something that belongs in a request handler.
+
+I worked with a team of three to four engineers on feature planning, code review, and system design.
+
+### xAGI, growth engineer intern
+
+From January to May 2025 I was at [xAGI](https://xagi.in), where I shipped four to five customer-facing AI products including podcast generation and poster creation. I built LLM-powered workflows for personalized content delivery in an e-learning platform, designed multi-step pipelines that call external tools and APIs, and implemented authentication for a text-to-code platform.
+
+It was the first time I saw how much of an "AI product" is actually plumbing, queueing, and error handling.
+
+## What I build on my own time
+
+### SyncHq
+
+[SyncHq](https://sync.gurukulhq.com) is an intelligence operating system for organizations. Two things in it I would build the same way again:
+
+**A two-tier knowledge layer.** An org-wide store I call Nucleus, plus per-project knowledge bases on [pgvector](https://github.com/pgvector/pgvector). Every AI tool in the product is grounded in company-specific data, which is what turns proposal and spec drafting from an afternoon into a few minutes.
+
+**Multi-org identity on a single login.** A signed active-org cookie, `/[orgSlug]` routing, and permission-first role-based access control with audit logging across more than 127 server actions. One account, several businesses, full isolation between them.
+
+On top of that sit fifteen or so AI go-to-market tools: lead finder, proposals, campaigns, roadmaps, conversational intake. The frontend uses [TanStack Query](https://tanstack.com/query/latest) with [React Suspense](https://react.dev/reference/react/Suspense) so navigation feels instant instead of showing a spinner between every step.
+
+### Gurukul
+
+[Gurukul](https://gurukulhq.com) is a multi-tenant school management platform on [Next.js 15](https://nextjs.org) with a [Prisma](https://www.prisma.io) monorepo and [PostgreSQL](https://www.postgresql.org). Per-school data isolation, role-based access across staff, student, and parent portals.
+
+It runs on more than 250 server actions and background-worker pipelines covering exams, answer-sheet analytics, billing, fees, and timetabling, secured with [Auth.js](https://authjs.dev) and role-driven server-side authorization. The AI features are automated question-paper generation, exam analytics, and an assistant called Saathi. [PostHog](https://posthog.com) for analytics, [Resend](https://resend.com) for mail, [Cloudinary](https://cloudinary.com) for media.
+
+### The Coder'z
+
+[The Coder'z](https://coderzofficial.vercel.app) was an AI-driven platform for developers with learning paths, project generation, and portfolio tools. The interesting part was a RAG system called KnowMe that turned a developer's own work into a personal AI agent: data, embeddings, retrieval, generation, with the context step tuned specifically to cut hallucination. The [source is on GitHub](https://github.com/jha-niraj/buildrhqofficial).
+
+Other things worth a look: [ValidateX](https://github.com/jha-niraj/Validate-X), idea validation with on-chain rewards, and [AfterClass](https://github.com/jha-niraj/AfterClass), campus-first study rooms. The rest is on [my GitHub](https://github.com/jha-niraj).
+
+## Four things I got wrong first
+
+### 1. Design the data model before you write the code
+
+Every genuinely painful week I have had traces back to a schema I got wrong early and patched around for months.
+
+AI tooling makes this worse, not better. It will happily generate forty files on top of a data model that cannot express what the business actually needs, and every one of those files is something you have to unpick later.
+
+So now I write the schema first and argue with it before anything else exists. On Gurukul that meant deciding what "school" meant as a tenancy boundary before a single route existed:
+
+```prisma
+// Every queryable row carries its tenant. Not "we'll add it later": the
+// isolation guarantee is only as strong as the column that is always there.
+model Student {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId])
+}
+```
+
+It is a boring decision. It is also the reason a multi-tenant platform did not turn into a data leak. If you are doing this in raw Postgres, [row-level security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html) enforces the same guarantee one layer lower, where an ORM mistake cannot route around it.
+
+### 2. AI features need guardrails, not optimism
+
+A model that drafts is a product. A model that acts is a liability, unless you decided in advance what it may do and what happens when it is wrong.
+
+The shape I keep coming back to:
+
+| Layer | What it does |
+| --- | --- |
+| Retrieval | Grounds the model in real company data, not its own memory |
+| Constraint | Restricts the action surface to what is safe to automate |
+| Review | Routes anything outside that surface to a human |
+| Trace | Logs the decision so you can answer "why did it do that?" |
+
+The self-healing agent I built for MSP tasks handles what it is confident about and proposes the rest for human review. Without that last step you do not have automation, you have an unlogged intern with production credentials.
+
+### 3. Retrieval quality is a product decision, not a library choice
+
+Picking a vector store is the easy part, and it is the part everyone writes about. The hard part is chunking, reranking, and knowing whether your retrieval is any good at all.
+
+For a long time I evaluated RAG by reading a handful of outputs and deciding they seemed fine. That is not evaluation, that is vibes. Retrieval fails quietly: the model still answers, still sounds confident, and is simply working from the wrong paragraph. You do not notice until a customer does.
+
+### 4. Shipping is a separate skill from writing code
+
+You can be good at writing code and still never finish anything. Shipping means cutting the third-best idea, deploying before it is beautiful, and accepting that the version users touch will teach you more than the version in your head.
+
+Fifteen thousand people found bugs in EventEye that I would never have found by reading the code again.
+
+## The stack I reach for
+
+Not because it is fashionable. Because I have shipped enough on it to know where it breaks.
+
+- **Frontend:** [Next.js](https://nextjs.org), [React](https://react.dev/reference/react/Suspense), [TanStack Query](https://tanstack.com/query/latest)
+- **Data:** [PostgreSQL](https://www.postgresql.org) with [Prisma](https://www.prisma.io) or [Drizzle](https://orm.drizzle.team), [pgvector](https://github.com/pgvector/pgvector) for embeddings, [Neon](https://neon.com) when I want serverless Postgres
+- **Auth:** [Auth.js](https://authjs.dev), with authorization enforced server-side rather than in the UI
+- **AI:** [Claude](https://claude.com/product/overview), retrieval pipelines, agent workflows with a human in the loop
+- **Infra:** [Vercel](https://vercel.com), Docker, [PostHog](https://posthog.com), [Resend](https://resend.com)
+
+This site runs on that stack, incidentally. Next.js on Vercel, Neon for Postgres, Drizzle for the schema, Resend for the mail. The comment thread below is a Postgres table, the subscribe box is a Resend segment.
+
+## What I'm working on next
+
+- **Distributed systems.** Consensus, replication, and what actually happens under real load rather than in a diagram.
+- **Retrieval evaluation.** Building the measurement, not just the pipeline. See point three.
+- **Designing for year two.** The state a product is in eighteen months after launch, not the state it is in at the demo.
+
+I finish a B.Tech in Computer Science at [Lovely Professional University](https://www.lpu.in) in 2026, and I hold the [Meta Front-End Developer certificate](https://www.coursera.org/professional-certificates/meta-front-end-developer). Neither taught me as much as the first production outage did.
+
+## What this blog is for
+
+Notes, mostly. Things I worked out the hard way and would have wanted to read first:
+
+- Architecture decisions and the trade-offs behind them, including the ones I got wrong.
+- Practical AI engineering, from systems running in production rather than from a tutorial.
+- Full-stack patterns in Next.js, PostgreSQL, and Prisma that survive contact with real usage.
+
+No listicles. No "10 VS Code extensions you need in 2026". Just what I am building and what it taught me.
+
+## Say hello
+
+If you are building something interesting, or stuck on something that has been stuck a while, I would like to hear about it.
+
+- Email: [jhaniraj45@gmail.com](mailto:jhaniraj45@gmail.com)
+- GitHub: [@jha-niraj](https://github.com/jha-niraj)
+- X: [@iamnirajjha](https://x.com/iamnirajjha)
+- LinkedIn: [nirajjha31](https://www.linkedin.com/in/nirajjha31/)
+
+There is a comment box below. Use it.

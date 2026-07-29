@@ -1,62 +1,35 @@
-"use client";
-
-import { useState } from "react";
-import { DATA } from "@/data/resume";
-import { ProjectCard } from "@/components/project-card";
 import BlurFade from "@/components/magicui/blur-fade";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ProjectCard } from "@/components/project-card";
+import { DATA } from "@/data/resume";
 
-const BLUR_FADE_DELAY = 0.04;
+const DELAY = 0.04;
 
+/**
+ * Every project, always. There is no "show more" toggle: hiding half the work
+ * behind a click only made the section look emptier than it is.
+ */
 export function ProjectsSection() {
-	const [showAll, setShowAll] = useState(false);
-
-	const featured = DATA.projects.filter((p) => p.featured);
-	const more = DATA.projects.filter((p) => !p.featured);
-	const displayed = showAll ? DATA.projects : featured;
-
 	return (
-		<>
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 max-w-[800px] mx-auto">
-				{displayed.map((project, id) => (
-					<BlurFade
-						key={project.title}
-						delay={BLUR_FADE_DELAY * 12 + id * 0.05}
-						inView
-					>
+		<ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+			{DATA.projects.map((project, i) => (
+				<li key={project.title} className="flex">
+					<BlurFade delay={DELAY * (i + 1)} inView className="flex w-full">
 						<ProjectCard
 							href={project.href}
 							title={project.title}
+							tagline={project.tagline}
 							description={project.description}
+							highlights={project.highlights}
 							dates={project.dates}
 							tags={project.technologies}
-							image={project.image}
-							video={project.video}
+							image={project.image || undefined}
+							video={project.video || undefined}
+							active={project.active}
 							links={project.links}
 						/>
 					</BlurFade>
-				))}
-			</div>
-			{more.length > 0 && (
-				<div className="flex justify-center mt-8">
-					<button
-						onClick={() => setShowAll(!showAll)}
-						className="group flex items-center gap-2 rounded-full border bg-card px-6 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-300 hover:text-foreground hover:border-foreground/20 hover:shadow-md"
-					>
-						{showAll ? (
-							<>
-								Show Less
-								<ChevronUp className="size-4 transition-transform group-hover:-translate-y-0.5" />
-							</>
-						) : (
-							<>
-								View All Projects ({DATA.projects.length})
-								<ChevronDown className="size-4 transition-transform group-hover:translate-y-0.5" />
-							</>
-						)}
-					</button>
-				</div>
-			)}
-		</>
+				</li>
+			))}
+		</ul>
 	);
 }

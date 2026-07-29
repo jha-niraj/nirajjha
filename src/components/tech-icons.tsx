@@ -1,95 +1,116 @@
-"use client";
-
 import {
-	SiNextdotjs,
-	SiReact,
-	SiTypescript,
-	SiTailwindcss,
-	SiFramer,
-	SiNodedotjs,
-	SiExpress,
-	SiGo,
-	SiPostgresql,
-	SiMongodb,
-	SiRedis,
-	SiPrisma,
-	SiSupabase,
+	Boxes,
+	Cloud,
+	Cog,
+	Database,
+	Layers,
+	Network,
+	ServerCog,
+	Sparkles,
+	Workflow,
+} from "lucide-react";
+import {
+	SiC,
+	SiClaude,
+	SiCplusplus,
+	SiCursor,
 	SiDocker,
-	SiCloudflare,
-	SiVercel,
+	SiExpress,
+	SiFramer,
 	SiGit,
+	SiJavascript,
+	SiMongodb,
+	SiNextdotjs,
+	SiNodedotjs,
+	SiPosthog,
+	SiPostgresql,
+	SiPostman,
+	SiPrisma,
+	SiReact,
+	SiReactquery,
+	SiRedis,
+	SiRemix,
+	SiShadcnui,
+	SiSocketdotio,
+	SiTailwindcss,
+	SiTypescript,
+	SiVercel,
 } from "react-icons/si";
-import { Cloud } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-type TechEntry = {
-	icon: React.ComponentType<{ className?: string }>;
-	color: string;
+type IconType = React.ComponentType<{ className?: string }>;
+
+/**
+ * Icons only - no brand colours. The palette across the whole site is
+ * foreground / muted-foreground / border, so a wall of vendor blues and
+ * purples would be the one thing shouting on an otherwise quiet page.
+ */
+const techMap: Record<string, IconType> = {
+	// Languages
+	TypeScript: SiTypescript,
+	JavaScript: SiJavascript,
+	"C++": SiCplusplus,
+	C: SiC,
+	SQL: Database,
+
+	// Frontend
+	"Next.js": SiNextdotjs,
+	"Next.js 15": SiNextdotjs,
+	"React.js": SiReact,
+	Remix: SiRemix,
+	TailwindCSS: SiTailwindcss,
+	"Shadcn UI": SiShadcnui,
+	"TanStack Query": SiReactquery,
+	"Framer Motion": SiFramer,
+
+	// Backend
+	"Node.js": SiNodedotjs,
+	Express: SiExpress,
+	"Server Actions": ServerCog,
+	"REST APIs": Network,
+	WebSockets: SiSocketdotio,
+	"Background Workers": Cog,
+
+	// Data
+	PostgreSQL: SiPostgresql,
+	pgvector: Boxes,
+	MongoDB: SiMongodb,
+	Redis: SiRedis,
+	Prisma: SiPrisma,
+
+	// AI
+	Claude: SiClaude,
+	OpenAI: Sparkles,
+	"RAG & Embeddings": Layers,
+	"Agent Pipelines": Workflow,
+	Cursor: SiCursor,
+
+	// Infra
+	Docker: SiDocker,
+	AWS: Cloud,
+	Vercel: SiVercel,
+	Git: SiGit,
+	Postman: SiPostman,
+	PostHog: SiPosthog,
 };
 
-const techMap: Record<string, TechEntry> = {
-	"Next.js": { icon: SiNextdotjs, color: "group-hover:text-foreground" },
-	"React.js": { icon: SiReact, color: "group-hover:text-[#61DAFB]" },
-	TypeScript: { icon: SiTypescript, color: "group-hover:text-[#3178C6]" },
-	TailwindCSS: { icon: SiTailwindcss, color: "group-hover:text-[#06B6D4]" },
-	"Shadcn UI": { icon: SiReact, color: "group-hover:text-foreground" },
-	"Framer Motion": { icon: SiFramer, color: "group-hover:text-[#0055FF]" },
-	Zustand: { icon: SiReact, color: "group-hover:text-[#764ABC]" },
-	"Node.js": { icon: SiNodedotjs, color: "group-hover:text-[#5FA04E]" },
-	Express: { icon: SiExpress, color: "group-hover:text-foreground" },
-	Golang: { icon: SiGo, color: "group-hover:text-[#00ADD8]" },
-	"REST APIs": { icon: SiNodedotjs, color: "group-hover:text-[#5FA04E]" },
-	WebSockets: { icon: SiNodedotjs, color: "group-hover:text-[#010101]" },
-	PostgreSQL: { icon: SiPostgresql, color: "group-hover:text-[#4169E1]" },
-	MongoDB: { icon: SiMongodb, color: "group-hover:text-[#47A248]" },
-	Redis: { icon: SiRedis, color: "group-hover:text-[#FF4438]" },
-	Prisma: { icon: SiPrisma, color: "group-hover:text-[#2D3748]" },
-	Drizzle: { icon: SiPostgresql, color: "group-hover:text-[#C5F74F]" },
-	Supabase: { icon: SiSupabase, color: "group-hover:text-[#3FCF8E]" },
-	Docker: { icon: SiDocker, color: "group-hover:text-[#2496ED]" },
-	"AWS S3": { icon: Cloud, color: "group-hover:text-[#FF9900]" },
-	Cloudflare: { icon: SiCloudflare, color: "group-hover:text-[#F38020]" },
-	Vercel: { icon: SiVercel, color: "group-hover:text-foreground" },
-	Git: { icon: SiGit, color: "group-hover:text-[#F05032]" },
-};
-
-export function TechBadge({
-	name,
-	className,
-}: {
-	name: string;
-	className?: string;
-}) {
-	const tech = techMap[name];
-	const Icon = tech?.icon;
+export function TechBadge({ name }: { name: string }) {
+	const Icon = techMap[name];
 
 	return (
-		<div
-			className={cn(
-				"group flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm transition-all duration-300 hover:shadow-md hover:border-foreground/20 hover:-translate-y-0.5",
-				className
-			)}
-		>
-			{Icon && (
-				<Icon
-					className={cn(
-						"size-4 text-muted-foreground transition-colors duration-300",
-						tech.color
-					)}
-				/>
-			)}
-			<span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">
-				{name}
-			</span>
-		</div>
+		<li className="group inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-300 hover:border-foreground/25 hover:text-foreground">
+			{Icon ? <Icon className="size-3.5 shrink-0" /> : null}
+			{name}
+		</li>
 	);
 }
 
-const categoryMeta: Record<string, { label: string; emoji: string }> = {
-	frontend: { label: "Frontend", emoji: "🎨" },
-	backend: { label: "Backend", emoji: "⚙️" },
-	databases: { label: "Databases", emoji: "🗄️" },
-	devops: { label: "DevOps & Infra", emoji: "☁️" },
+const CATEGORY_LABELS: Record<string, string> = {
+	languages: "Languages",
+	frontend: "Frontend",
+	backend: "Backend",
+	databases: "Data",
+	ai: "AI",
+	infra: "Infra & Tooling",
 };
 
 export function SkillCategory({
@@ -99,22 +120,16 @@ export function SkillCategory({
 	category: string;
 	skills: readonly string[];
 }) {
-	const meta = categoryMeta[category] || {
-		label: category,
-		emoji: "💻",
-	};
-
 	return (
-		<div className="space-y-3">
-			<h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-				<span>{meta.emoji}</span>
-				{meta.label}
+		<div className="space-y-2.5">
+			<h3 className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">
+				{CATEGORY_LABELS[category] ?? category}
 			</h3>
-			<div className="flex flex-wrap gap-2">
+			<ul className="flex flex-wrap gap-1.5">
 				{skills.map((skill) => (
 					<TechBadge key={skill} name={skill} />
 				))}
-			</div>
+			</ul>
 		</div>
 	);
 }
