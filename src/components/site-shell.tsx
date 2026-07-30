@@ -1,6 +1,5 @@
 "use client";
 
-import { AIPanelMount } from "@/components/ai/ai-panel-mount";
 import Navbar from "@/components/navbar";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
@@ -22,17 +21,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
  * page inside it changes, so an open conversation stays open and only the left
  * column swaps.
  */
-export function SiteShell({
-	postTitles,
-	children,
-}: {
-	/** slug -> title, so the panel can name the post without a server call. */
-	postTitles: Record<string, string>;
-	children: React.ReactNode;
-}) {
+export function SiteShell({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex h-screen w-full overflow-hidden bg-background">
-			<div className="min-w-0 flex-1 transition-[padding] duration-300 ease-out lg:pr-[var(--ai-panel-inset,0px)]">
+			<div className="min-w-0 flex-1">
 				<div className="m-2 h-[calc(100vh-1rem)] overflow-hidden rounded-2xl border border-border bg-card/30 shadow-sm sm:m-3 sm:h-[calc(100vh-1.5rem)]">
 					{/* `data-scroll-root` is the contract with everything that used to
 					    read window.scrollY: the progress bar, the contents rail and
@@ -53,7 +45,6 @@ export function SiteShell({
 			</div>
 
 			<ScrollToTop />
-			<AIPanelMount postTitles={postTitles} />
 			<Navbar />
 		</div>
 	);

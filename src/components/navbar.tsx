@@ -23,6 +23,9 @@ export default function Navbar() {
 							<TooltipTrigger asChild>
 								<Link
 									href={item.href}
+									{...("external" in item && item.external
+										? { target: "_blank", rel: "noopener noreferrer" }
+										: {})}
 									className={cn(
 										buttonVariants({
 											variant: "ghost",

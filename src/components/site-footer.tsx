@@ -16,7 +16,9 @@ export function SiteFooter() {
 						Blog
 					</Link>
 					<Link
-						href="/ideas"
+						href="https://builderhq.com/ideas"
+						target="_blank"
+						rel="noopener noreferrer"
 						className="transition-colors hover:text-foreground"
 					>
 						Ideas
@@ -28,7 +30,9 @@ export function SiteFooter() {
 						Profile
 					</Link>
 					<Link
-						href="/contribute"
+						href="https://builderhq.com/contribute"
+						target="_blank"
+						rel="noopener noreferrer"
 						className="transition-colors hover:text-foreground"
 					>
 						Contribute

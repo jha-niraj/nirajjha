@@ -145,8 +145,7 @@ export default function RootLayout({
 					disableTransitionOnChange
 				>
 					{/* Only the providers live here. The site chrome (header, footer,
-					    dock, assistant) belongs to the (site) group, so /admin can
-					    render a completely different shell without fighting it. */}
+					    dock) belongs to the (site) group. */}
 					<TooltipProvider delayDuration={0}>
 						<ToastProvider>{children}</ToastProvider>
 					</TooltipProvider>

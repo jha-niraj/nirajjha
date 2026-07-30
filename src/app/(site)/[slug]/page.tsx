@@ -1,4 +1,3 @@
-import { AskSelection } from "@/components/ai/ask-selection";
 import { Comments } from "@/components/comments";
 import BlurFade from "@/components/magicui/blur-fade";
 import { PostEngagementBar } from "@/components/post-engagement";
@@ -218,7 +217,6 @@ export default async function PostPage({
 						<PostEmbeds />
 						<PostTerms rootId="post-article" />
 						<PostHeadings rootId="post-article" />
-						<AskSelection rootId="post-article" />
 
 						<BlurFade delay={0.06} inView>
 							<div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-8">

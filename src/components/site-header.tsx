@@ -9,11 +9,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
 
+/**
+ * Ideas and Contribute moved to BuilderHQ, which has real accounts. They stay
+ * in the nav because the destinations still matter; `external` is what stops
+ * the active-item logic from ever trying to match them against a local path.
+ */
 const NAV = [
 	{ href: "/", label: "Blog" },
-	{ href: "/ideas", label: "Ideas" },
+	{ href: "https://builderhq.com/ideas", label: "Ideas", external: true },
 	{ href: "/portfolio", label: "Profile" },
-	{ href: "/contribute", label: "Contribute" },
+	{ href: "https://builderhq.com/contribute", label: "Contribute", external: true },
 ];
 
 /**
@@ -26,7 +31,10 @@ const NAV = [
 function activeHref(pathname: string): string {
 	if (pathname === "/") return "/";
 	const match = NAV.find(
-		(item) => item.href !== "/" && pathname.startsWith(item.href)
+		(item) =>
+			!("external" in item && item.external) &&
+			item.href !== "/" &&
+			pathname.startsWith(item.href)
 	);
 	return match ? match.href : "/";
 }

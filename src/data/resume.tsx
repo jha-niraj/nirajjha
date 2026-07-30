@@ -88,11 +88,27 @@ export const DATA = {
 		"System design - designing for the second year of a product, not just the first launch",
 	],
 
+	/**
+	 * Ideas and Contribute now live on BuilderHQ, which has real accounts. The
+	 * entries stay so the dock keeps its shape and the destinations stay
+	 * discoverable; only the target moved. `external` opens them in a new tab
+	 * rather than navigating this site away to another origin.
+	 */
 	navbar: [
 		{ href: "/", icon: NotebookIcon, label: "Blog" },
-		{ href: "/ideas", icon: LightbulbIcon, label: "Ideas" },
+		{
+			href: "https://builderhq.com/ideas",
+			icon: LightbulbIcon,
+			label: "Ideas",
+			external: true,
+		},
 		{ href: "/portfolio", icon: HomeIcon, label: "Profile" },
-		{ href: "/contribute", icon: HeartHandshakeIcon, label: "Contribute" },
+		{
+			href: "https://builderhq.com/contribute",
+			icon: HeartHandshakeIcon,
+			label: "Contribute",
+			external: true,
+		},
 	],
 
 	contact: {

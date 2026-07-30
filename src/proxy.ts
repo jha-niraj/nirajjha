@@ -2,22 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { VISITOR_COOKIE, VISITOR_MAX_AGE, isVisitorId } from "@/lib/visitor-id";
 
 /**
- * Paths that require a session. Everything else on this site is public, so the
- * list is a prefix match on one branch rather than a matcher of exceptions.
- */
-const PROTECTED = ["/admin"];
-
-/** The sign-in screen itself, which obviously cannot require a session. */
-const PUBLIC_WITHIN_PROTECTED = ["/admin"];
-
-function isProtected(pathname: string) {
-	if (PUBLIC_WITHIN_PROTECTED.includes(pathname)) return false;
-	return PROTECTED.some(
-		(base) => pathname === base || pathname.startsWith(`${base}/`)
-	);
-}
-
-/**
  * Mints the anonymous visitor id.
  *
  * This is the file Next 16 calls `proxy`; it was `middleware` up to Next 15 and
@@ -36,26 +20,8 @@ function isProtected(pathname: string) {
  * only thing they gain is another vote.
  */
 export default function proxy(request: NextRequest) {
-	const { pathname } = request.nextUrl;
-
-	// Cheap gate only. It checks that a session cookie exists, which is enough
-	// to bounce anonymous traffic before it reaches a server component, but it
-	// is NOT the authorisation check: a cookie can be forged and middleware
-	// cannot validate a session or read a role. `requireAdmin()` on the page is
-	// the real gate, and it runs regardless of what happens here.
-	if (isProtected(pathname)) {
-		const hasSession =
-			request.cookies.has("better-auth.session_token") ||
-			request.cookies.has("__Secure-better-auth.session_token");
-
-		if (!hasSession) {
-			const url = request.nextUrl.clone();
-			url.pathname = "/admin";
-			url.search = "";
-			return NextResponse.redirect(url);
-		}
-	}
-
+	// Every route on this site is public now, so there is nothing to gate: the
+	// only job left is minting the anonymous id.
 	const existing = request.cookies.get(VISITOR_COOKIE)?.value;
 	if (existing && isVisitorId(existing)) return NextResponse.next();
 

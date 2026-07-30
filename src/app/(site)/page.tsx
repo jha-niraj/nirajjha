@@ -188,7 +188,9 @@ export default async function HomePage() {
 							as a team member, not as a student.
 						</p>
 						<Link
-							href="/contribute"
+							href="https://builderhq.com/contribute"
+							target="_blank"
+							rel="noopener noreferrer"
 							className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-85"
 						>
 							How it works

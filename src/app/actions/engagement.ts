@@ -13,8 +13,6 @@ import {
 	EMPTY_ENGAGEMENT,
 } from "@/db/queries";
 import { getPostSlugs } from "@/lib/slugs";
-import { getPublicIdeaSlugs } from "@/db/ideas";
-import type { SubjectType } from "@/db/queries";
 import { getVisitorId } from "@/lib/visitor-server";
 
 /**
@@ -32,20 +30,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME = 60;
 const MAX_BODY = 2000;
 
-/**
- * A thread may only hang off something that actually exists and is public.
- * Posts come from the filesystem, ideas from the database, and an unpublished
- * idea is deliberately not commentable.
- */
-async function assertKnownSubject(slug: string, subjectType: SubjectType) {
-	const known =
-		subjectType === "idea" ? await getPublicIdeaSlugs() : await getPostSlugs();
+/** A thread may only hang off a post that actually exists. */
+async function assertKnownSubject(slug: string) {
+	const known = await getPostSlugs();
 	if (!known.has(slug)) throw new Error("Unknown subject");
 }
 
 export async function trackView(slug: string): Promise<PostEngagement> {
 	try {
-		await assertKnownSubject(slug, "post");
+		await assertKnownSubject(slug);
 		const visitorId = await getVisitorId();
 		await recordView(slug);
 		return await getEngagement(slug, visitorId ?? undefined);
@@ -59,7 +52,7 @@ export async function react(
 	slug: string,
 	reaction: ReactionKind
 ): Promise<PostEngagement> {
-	await assertKnownSubject(slug, "post");
+	await assertKnownSubject(slug);
 	if (reaction !== "like" && reaction !== "dislike") {
 		throw new Error("Invalid reaction");
 	}
@@ -72,14 +65,11 @@ export async function react(
 	return setReaction(slug, visitorId, reaction);
 }
 
-export async function loadComments(
-	slug: string,
-	subjectType: SubjectType = "post"
-): Promise<CommentNode[]> {
+export async function loadComments(slug: string): Promise<CommentNode[]> {
 	try {
-		await assertKnownSubject(slug, subjectType);
+		await assertKnownSubject(slug);
 		const visitorId = await getVisitorId();
-		return await getComments(slug, visitorId ?? undefined, subjectType);
+		return await getComments(slug, visitorId ?? undefined);
 	} catch {
 		return [];
 	}
@@ -94,11 +84,9 @@ export async function postComment(input: {
 	parentId: string | null;
 	authorName: string;
 	body: string;
-	subjectType?: SubjectType;
 }): Promise<PostCommentResult> {
-	const subjectType = input.subjectType ?? "post";
 	try {
-		await assertKnownSubject(input.slug, subjectType);
+		await assertKnownSubject(input.slug);
 
 		const visitorId = await getVisitorId();
 		if (!visitorId) {
@@ -127,7 +115,6 @@ export async function postComment(input: {
 			authorName,
 			body,
 			visitorId,
-			subjectType,
 		});
 
 		return { ok: true, comments };
@@ -141,10 +128,9 @@ export async function postComment(input: {
 
 export async function removeComment(
 	slug: string,
-	id: string,
-	subjectType: SubjectType = "post"
+	id: string
 ): Promise<CommentNode[]> {
-	await assertKnownSubject(slug, subjectType);
+	await assertKnownSubject(slug);
 	if (!UUID.test(id)) throw new Error("Invalid comment");
 
 	const visitorId = await getVisitorId();
@@ -153,5 +139,5 @@ export async function removeComment(
 	// deleteComment scopes the update to this visitor's own rows, so the cookie
 	// is what decides ownership rather than anything the caller sent.
 	await deleteComment(id, visitorId);
-	return getComments(slug, visitorId, subjectType);
+	return getComments(slug, visitorId);
 }

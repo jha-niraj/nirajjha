@@ -1,7 +1,7 @@
 import { SITE_URL } from "@/lib/site";
 import type { MetadataRoute } from "next";
 
-const DISALLOW = ["/api/", "/admin"];
+const DISALLOW = ["/api/"];
 
 /**
  * Explicitly allowing the answer-engine crawlers matters as much as allowing
