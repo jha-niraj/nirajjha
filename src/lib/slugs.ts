@@ -1,6 +1,6 @@
 import "server-only";
 
-import { CONTENT_DIR } from "@/lib/site";
+import { CONTENT_ROOT } from "@/lib/content-path";
 import fs from "fs";
 import path from "path";
 import { cache } from "react";
@@ -15,7 +15,7 @@ import { cache } from "react";
  * (and trip Terser on shiki's top-level await).
  */
 export const getPostSlugs = cache(async (): Promise<Set<string>> => {
-	const dir = path.join(process.cwd(), CONTENT_DIR);
+	const dir = CONTENT_ROOT;
 	if (!fs.existsSync(dir)) return new Set();
 
 	return new Set(

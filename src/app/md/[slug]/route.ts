@@ -1,7 +1,7 @@
 import { getBlogPosts } from "@/data/blog";
-import { CONTENT_DIR, SITE_URL } from "@/lib/site";
+import { postFilePath } from "@/lib/content-path";
+import { SITE_URL } from "@/lib/site";
 import fs from "node:fs";
-import path from "node:path";
 
 export const dynamic = "force-static";
 
@@ -36,7 +36,7 @@ export async function GET(
 		return new Response("Not found", { status: 404 });
 	}
 
-	const file = path.join(process.cwd(), CONTENT_DIR, `${slug}.mdx`);
+	const file = postFilePath(slug);
 	const raw = fs.readFileSync(file, "utf-8");
 	// Drop the frontmatter block and restate the useful parts as prose, so a
 	// reader of the plain file gets the metadata without YAML noise.

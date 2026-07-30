@@ -1,8 +1,8 @@
 import { getPost } from "@/data/blog";
 import { getPostSlugs } from "@/lib/slugs";
 import fs from "node:fs";
-import path from "node:path";
-import { CONTENT_DIR, SITE_URL } from "@/lib/site";
+import { postFilePath } from "@/lib/content-path";
+import { SITE_URL } from "@/lib/site";
 import OpenAI from "openai";
 
 export const runtime = "nodejs";
@@ -88,10 +88,7 @@ export async function POST(request: Request) {
 	const post = await getPost(slug);
 	if (!post) return new Response("Unknown post.", { status: 404 });
 
-	const raw = fs.readFileSync(
-		path.join(process.cwd(), CONTENT_DIR, `${slug}.mdx`),
-		"utf-8"
-	);
+	const raw = fs.readFileSync(postFilePath(slug), "utf-8");
 	const body = raw.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
 
 	const history = Array.isArray(payload.history)

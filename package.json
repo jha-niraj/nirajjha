@@ -21,7 +21,6 @@
         "blog:sync": "node scripts/blog-sync.mjs",
         "blog:broadcast": "node scripts/blog-broadcast.mjs",
         "blog:preview": "node scripts/blog-broadcast.mjs --preview",
-        "postbuild": "node scripts/blog-sync.mjs",
         "links:check": "node scripts/check-links.mjs",
         "blog:lint": "node scripts/blog-lint.mjs",
         "apply:list": "node scripts/applications.mjs list",

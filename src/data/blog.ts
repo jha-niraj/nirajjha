@@ -1,6 +1,6 @@
 import "server-only";
 
-import { CONTENT_DIR } from "@/lib/site";
+import { CONTENT_ROOT } from "@/lib/content-path";
 import { categorySlug } from "@/lib/categories";
 import { canonicalTag, sortTags } from "@/lib/tags";
 import fs from "fs";
@@ -55,7 +55,7 @@ export type Post = {
 	headings: { id: string; text: string; level: 2 | 3 }[];
 };
 
-const contentDir = () => path.join(process.cwd(), CONTENT_DIR);
+const contentDir = () => CONTENT_ROOT;
 
 function getMDXFiles(dir: string) {
 	if (!fs.existsSync(dir)) return [];

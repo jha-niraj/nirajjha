@@ -27,7 +27,7 @@ pnpm db:generate  # write a SQL migration from schema changes
 pnpm db:migrate   # apply pending migrations to DATABASE_URL
 pnpm db:studio    # browse the data
 pnpm resend:setup # create/find the newsletter segment, print its id
-pnpm blog:sync    # mirror MDX frontmatter into the posts table (runs on postbuild)
+pnpm blog:sync    # mirror MDX frontmatter into the posts table (MANUAL, see below)
 pnpm blog:broadcast          # DRY RUN: show what would be emailed
 pnpm blog:broadcast --send   # actually send
 pnpm links:check  # verify every outbound link in content/ and resume.tsx
@@ -342,11 +342,21 @@ bridge, and the pipeline has exactly three moving parts.
 
 1. Write `content/my-post.mdx` with `title`, `summary`, `publishedAt`,
    `category`, `kind`, `tags`, `art`.
-2. Deploy. `postbuild` runs `blog:sync`, which inserts the row with
-   `broadcast_sent_at` null.
-3. `pnpm blog:broadcast` to preview: it prints the subject, URL and recipient
+2. `pnpm blog:sync` to insert the row with `broadcast_sent_at` null.
+3. Deploy.
+4. `pnpm blog:broadcast` to preview: it prints the subject, URL and recipient
    count and sends nothing.
-4. `pnpm blog:broadcast --send` when the preview looks right.
+5. `pnpm blog:broadcast --send` when the preview looks right.
+
+**Sync is manual, not a `postbuild` hook.** It used to run on every build, which
+meant every preview deploy, every rollback and every CI run wrote to the
+production database for no reason. A post is not published by being built, it is
+published by you deciding it is, so the write happens when you say so.
+
+The cost of that choice: a post that has not been synced is invisible to
+`blog:broadcast` and to the admin analytics, because both read the `posts`
+table rather than the filesystem. If a new post is missing from `/admin/blogs`,
+`blog:sync` is what you forgot.
 
 ### Why broadcast is manual
 
@@ -403,6 +413,18 @@ Three rules keep this working:
 `lib/visitor.ts` promotes a pre-cookie `nj.visitor` localStorage id into the
 cookie when it finds one, so readers who reacted before this existed keep their
 history. Do not remove that until it has been deployed long enough not to matter.
+
+## Reading files at runtime
+
+Anything that touches the content directory must go through
+`src/lib/content-path.ts`, which holds the only `path.join(process.cwd(),
+"content")` in the codebase.
+
+The directory name has to be a **string literal inside the join**. Passing an
+imported constant makes the path opaque to Turbopack's static analysis: it
+cannot tell which subtree is being read, so it traces the whole project and the
+build warns "Encountered unexpected file in NFT list". Nothing breaks, but every
+file in the repo becomes a traced dependency of the routes that read a post.
 
 ## Data
 

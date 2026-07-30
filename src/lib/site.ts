@@ -16,6 +16,3 @@ export const SITE_DOMAIN = "nirajjha.in";
  */
 export const GOOGLE_SITE_VERIFICATION = "";
 export const BING_SITE_VERIFICATION = "";
-
-/** Where the blog MDX files live, relative to the repo root. */
-export const CONTENT_DIR = "content";
