@@ -1,5 +1,4 @@
 import BlurFade from "@/components/magicui/blur-fade";
-import { Signature } from "@/components/signature";
 import { DATA } from "@/data/resume";
 import { ArrowUpRight, FileText, Mail, MapPin } from "lucide-react";
 import Image from "next/image";
@@ -58,13 +57,12 @@ export function Hero() {
 					</BlurFade>
 
 					<div className="space-y-3">
-						{/* BlurFadeText animates per character, which cannot carry the
-						    glitch: the effect needs one element holding the whole string
-						    so the three offset copies line up. Fading the block instead
-						    keeps the entrance and lets the name glitch on hover. */}
+						{/* Plain heading. The distorting wordmark lives in the footer,
+						    where it is the closing flourish; running it here too would
+						    put the same trick at both ends of every page. */}
 						<BlurFade delay={DELAY * 2} yOffset={8}>
 							<h1 className="text-5xl font-semibold tracking-tighter sm:text-6xl">
-								<Signature text={DATA.name} />
+								{DATA.name}
 							</h1>
 						</BlurFade>
 						<BlurFade delay={DELAY * 3}>

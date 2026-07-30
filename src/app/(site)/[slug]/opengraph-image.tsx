@@ -47,7 +47,7 @@ export default async function PostOpengraphImage({
 						}}
 					/>
 					<div style={{ fontSize: 26, color: "#a1a1a1", letterSpacing: 1 }}>
-						{`${SITE_DOMAIN}/blogs`}
+						{SITE_DOMAIN}
 					</div>
 				</div>
 

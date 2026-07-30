@@ -134,7 +134,7 @@ export function SubscribeDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{children}</DialogTrigger>
-			<DialogContent className="max-w-md">
+			<DialogContent className="dialog-stagger max-w-md">
 				<div className="flex items-start gap-3">
 					<span
 						aria-hidden

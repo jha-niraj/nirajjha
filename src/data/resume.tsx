@@ -1,6 +1,11 @@
 import { Icons } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
-import { HomeIcon, NotebookIcon } from "lucide-react";
+import {
+	HeartHandshakeIcon,
+	HomeIcon,
+	LightbulbIcon,
+	NotebookIcon,
+} from "lucide-react";
 
 export const DATA = {
 	name: "Niraj Kumar Jha",
@@ -26,7 +31,7 @@ export const DATA = {
 		"Full Stack Engineer building AI products end to end - pipelines, integrations, and the boring plumbing that makes them survive production.",
 
 	summary:
-		"I'm a Full Stack Engineer at **Creatr**, where I build the AI systems behind DeepBuild - an email pipeline wired into Gmail webhooks, M365 and MSP integrations, and a retrieval-backed pipeline for long-form reports. Before that I was the founding engineer at **EventEye**, taking an event management and discovery platform from an empty repo to 15,000+ users.\n\nOn the side I ship products: **SyncHq**, an intelligence operating system for organizations, and **Gurukul**, a multi-tenant school management platform. I care about designing the data model before writing the code, keeping AI behind guardrails instead of hoping for the best, and shipping things people actually use.",
+		"I'm a Full Stack Engineer at **Creatr**, where I build the AI systems behind DeepBuild - an email pipeline wired into Gmail webhooks, M365 and MSP integrations, and a retrieval-backed pipeline for long-form reports. Before that I was the founding engineer at **EventEye**, taking an event management and discovery platform from an empty repo to 15,000+ users.\n\nOn the side I ship products of my own, most recently **The Coder'z**, an AI learning platform built around a retrieval system that turns a developer's own work into a personal agent. I care about designing the data model before writing the code, keeping AI behind guardrails instead of hoping for the best, and shipping things people actually use.",
 
 	resumeUrl:
 		"https://drive.google.com/file/d/1YbL_SlCA4b5esl8nzIDrpEr84l-H4OoH/view",
@@ -84,8 +89,10 @@ export const DATA = {
 	],
 
 	navbar: [
-		{ href: "/", icon: HomeIcon, label: "Home" },
-		{ href: "/blogs", icon: NotebookIcon, label: "Blog" },
+		{ href: "/", icon: NotebookIcon, label: "Blog" },
+		{ href: "/ideas", icon: LightbulbIcon, label: "Ideas" },
+		{ href: "/portfolio", icon: HomeIcon, label: "Profile" },
+		{ href: "/contribute", icon: HeartHandshakeIcon, label: "Contribute" },
 	],
 
 	contact: {
@@ -194,6 +201,7 @@ export const DATA = {
 	projects: [
 		{
 			title: "SyncHq",
+			hidden: true,
 			href: "https://sync.gurukulhq.com",
 			dates: "Jan 2026 - Present",
 			active: true,
@@ -226,6 +234,7 @@ export const DATA = {
 		},
 		{
 			title: "Gurukul",
+			hidden: true,
 			href: "https://gurukulhq.com",
 			dates: "Oct 2025 - Present",
 			active: true,
@@ -293,7 +302,6 @@ export const DATA = {
 		},
 		{
 			title: "ValidateX",
-			hidden: true,
 			href: "https://github.com/jha-niraj/Validate-X",
 			dates: "2025",
 			active: false,
@@ -315,7 +323,6 @@ export const DATA = {
 		},
 		{
 			title: "AfterClass",
-			hidden: true,
 			href: "https://afterclass-nine.vercel.app",
 			dates: "2025",
 			active: false,
@@ -348,7 +355,6 @@ export const DATA = {
 		},
 		{
 			title: "Vani",
-			hidden: true,
 			href: "https://github.com/jha-niraj/Vani",
 			dates: "2025",
 			active: false,

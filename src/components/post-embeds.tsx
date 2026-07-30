@@ -1,5 +1,7 @@
 "use client";
 
+import { DiagramFigure } from "@/components/diagram-figure";
+import { createRoot, type Root } from "react-dom/client";
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
 
@@ -60,7 +62,11 @@ function wireYouTube(root: ParentNode): () => void {
 	return () => cleanups.forEach((fn) => fn());
 }
 
-async function renderMermaid(root: ParentNode, isDark: boolean) {
+async function renderMermaid(
+	root: ParentNode,
+	isDark: boolean,
+	roots: Root[]
+) {
 	const hosts = Array.from(
 		root.querySelectorAll<HTMLElement>('[data-embed="mermaid"]')
 	);
@@ -133,8 +139,15 @@ async function renderMermaid(root: ParentNode, isDark: boolean) {
 				`mermaid-${i}-${isDark ? "d" : "l"}`,
 				host.dataset.source
 			);
-			host.innerHTML = svg;
+			// Handed to a React root rather than injected as innerHTML: the
+			// viewport, its controls and the full-screen overlay are a component,
+			// and mounting them this way is the only way to reach React from
+			// inside an article that was itself injected as a string.
+			host.replaceChildren();
 			host.dataset.state = "ready";
+			const root = createRoot(host);
+			root.render(<DiagramFigure svg={svg} />);
+			roots.push(root);
 		} catch (error) {
 			// A malformed diagram must not take the article down with it. Leave
 			// the source visible, which is the most useful thing to show anyone
@@ -153,11 +166,21 @@ export function PostEmbeds() {
 		if (!article) return;
 
 		const unwire = wireYouTube(article);
+		// One React root per diagram, unmounted alongside the diagram it renders.
+		// Collected rather than queried back out of the DOM because the next
+		// theme render replaces each host's contents entirely.
+		const roots: Root[] = [];
+
 		// Diagrams are redrawn on theme change: the SVG bakes in its colours, so
 		// a light-mode diagram left alone would stay light on a dark page.
-		void renderMermaid(article, resolvedTheme === "dark");
+		void renderMermaid(article, resolvedTheme === "dark", roots);
 
-		return unwire;
+		return () => {
+			unwire();
+			// Deferred: React refuses to unmount a root synchronously from inside
+			// the render cycle that owns it, and logs a warning if you try.
+			queueMicrotask(() => roots.forEach((r) => r.unmount()));
+		};
 	}, [resolvedTheme]);
 
 	return null;

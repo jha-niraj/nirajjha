@@ -5,7 +5,7 @@ import {
 	postComment,
 	removeComment,
 } from "@/app/actions/engagement";
-import type { CommentNode } from "@/db/queries";
+import type { CommentNode, SubjectType } from "@/db/queries";
 import { cn } from "@/lib/utils";
 import { useIsHydrated, useRememberedName } from "@/lib/visitor";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -50,6 +50,7 @@ function countAll(nodes: CommentNode[]): number {
 
 function CommentForm({
 	slug,
+	subjectType,
 	parentId,
 	onDone,
 	onCancel,
@@ -57,6 +58,7 @@ function CommentForm({
 	compact,
 }: {
 	slug: string;
+	subjectType: SubjectType;
 	parentId: string | null;
 	onDone: (next: CommentNode[]) => void;
 	onCancel?: () => void;
@@ -154,11 +156,13 @@ function CommentForm({
 function CommentItem({
 	comment,
 	slug,
+	subjectType,
 	depth,
 	onChange,
 }: {
 	comment: CommentNode;
 	slug: string;
+	subjectType: SubjectType;
 	depth: number;
 	onChange: (next: CommentNode[]) => void;
 }) {
@@ -249,6 +253,7 @@ function CommentItem({
 					<div className="mt-4 pl-[2.375rem]">
 						<CommentForm
 							slug={slug}
+							subjectType={subjectType}
 							parentId={comment.id}
 							onDone={onChange}
 							onCancel={() => setReplying(false)}
@@ -267,6 +272,7 @@ function CommentItem({
 								key={child.id}
 								comment={child}
 								slug={slug}
+								subjectType={subjectType}
 								depth={depth + 1}
 								onChange={onChange}
 							/>
@@ -283,9 +289,14 @@ function CommentItem({
 export function Comments({
 	slug,
 	initial,
+	subjectType = "post",
+	title,
 }: {
 	slug: string;
 	initial: CommentNode[];
+	subjectType?: SubjectType;
+	/** Overrides the heading copy, so an idea does not say "post". */
+	title?: string;
 }) {
 	const hydrated = useIsHydrated();
 	const [comments, setComments] = useState(initial);
@@ -311,7 +322,7 @@ export function Comments({
 			<h2 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
 				<MessageSquare className="size-5" />
 				{total === 0
-					? "Comments"
+					? (title ?? "Comments")
 					: `${total} ${total === 1 ? "comment" : "comments"}`}
 			</h2>
 			<p className="mt-2 text-base text-muted-foreground">
@@ -319,7 +330,12 @@ export function Comments({
 			</p>
 
 			<div className="mt-6">
-				<CommentForm slug={slug} parentId={null} onDone={setComments} />
+				<CommentForm
+					slug={slug}
+					subjectType={subjectType}
+					parentId={null}
+					onDone={setComments}
+				/>
 			</div>
 
 			{comments.length > 0 && (
@@ -330,6 +346,7 @@ export function Comments({
 								key={comment.id}
 								comment={comment}
 								slug={slug}
+								subjectType={subjectType}
 								depth={0}
 								onChange={setComments}
 							/>

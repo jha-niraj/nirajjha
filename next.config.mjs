@@ -14,15 +14,24 @@ const nextConfig = {
 		formats: ["image/avif", "image/webp"],
 	},
 
+	// `/<slug>.md` serves the post's markdown source. Stripe's llms.txt works
+	// because every link in it resolves to a plain-text page, not because the
+	// index itself is clever, so the whole convention rests on this rewrite.
+	async rewrites() {
+		return [{ source: "/:slug.md", destination: "/md/:slug" }];
+	},
+
 	// The index settled at /blogs after passing through /blog and /notes, and
 	// posts moved from /blog/<slug> to /<slug>. Permanent redirects so any link
 	// already out in the world keeps working and passes its ranking through.
 	async redirects() {
 		return [
-			{ source: "/blog", destination: "/blogs", permanent: true },
+			// The blog index is the site root now; the profile moved to /portfolio.
+			{ source: "/blogs", destination: "/", permanent: true },
+			{ source: "/blog", destination: "/", permanent: true },
 			{ source: "/blog/:slug", destination: "/:slug", permanent: true },
 			// The index was briefly called /notes.
-			{ source: "/notes", destination: "/blogs", permanent: true },
+			{ source: "/notes", destination: "/", permanent: true },
 			// The very first post shipped under a longer slug.
 			{
 				source: "/hello-im-niraj-jha",

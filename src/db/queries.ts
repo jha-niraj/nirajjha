@@ -1,10 +1,13 @@
 import "server-only";
 
 import { db } from "@/db";
-import { comments, postReactions, postStats } from "@/db/schema";
+import { comments, postReactions, postStats, postViewsDaily } from "@/db/schema";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 export type ReactionKind = "like" | "dislike";
+
+/** What a comment thread hangs off. */
+export type SubjectType = "post" | "idea";
 
 export type PostEngagement = {
 	views: number;
@@ -47,6 +50,16 @@ async function safeRead<T>(run: () => Promise<T>, fallback: T): Promise<T> {
 /** Increments and returns the new count. Upserts so a brand new post works. */
 export async function recordView(slug: string): Promise<number> {
 	if (!db) return 0;
+
+	// Both writes, so the total and the daily series can never disagree about
+	// the same pageview.
+	await db
+		.insert(postViewsDaily)
+		.values({ slug, day: new Date().toISOString().slice(0, 10), views: 1 })
+		.onConflictDoUpdate({
+			target: [postViewsDaily.slug, postViewsDaily.day],
+			set: { views: sql`${postViewsDaily.views} + 1` },
+		});
 
 	const [row] = await db
 		.insert(postStats)
@@ -190,12 +203,15 @@ export type CommentNode = {
 export async function getComments(
 	slug: string,
 	visitorId?: string,
+	subjectType: SubjectType = "post",
 ): Promise<CommentNode[]> {
 	return safeRead(async () => {
 		const rows = await db!
 			.select()
 			.from(comments)
-			.where(eq(comments.slug, slug))
+			.where(
+				and(eq(comments.subjectType, subjectType), eq(comments.slug, slug)),
+			)
 			.orderBy(asc(comments.createdAt));
 
 		const nodes = new Map<string, CommentNode>();
@@ -258,17 +274,25 @@ export async function addComment(input: {
 	authorName: string;
 	body: string;
 	visitorId: string;
+	subjectType?: SubjectType;
 }): Promise<CommentNode[]> {
+	const subjectType = input.subjectType ?? "post";
 	if (!db) return [];
 
 	// A reply must belong to the same post as its parent, otherwise a crafted
 	// parentId could graft a thread from one post onto another.
 	if (input.parentId) {
 		const [parent] = await db
-			.select({ slug: comments.slug })
+			.select({ slug: comments.slug, subjectType: comments.subjectType })
 			.from(comments)
 			.where(eq(comments.id, input.parentId));
-		if (!parent || parent.slug !== input.slug) {
+		// Same subject as well as same slug, or a reply could be grafted from a
+		// post thread onto an idea that happens to share a slug.
+		if (
+			!parent ||
+			parent.slug !== input.slug ||
+			parent.subjectType !== subjectType
+		) {
 			throw new Error("Invalid parent comment");
 		}
 	}
@@ -276,6 +300,7 @@ export async function addComment(input: {
 	await db
 		.insert(comments)
 		.values({
+			subjectType,
 			slug: input.slug,
 			parentId: input.parentId,
 			authorName: input.authorName,
@@ -286,7 +311,7 @@ export async function addComment(input: {
 		// rather than an error page.
 		.onConflictDoNothing();
 
-	return getComments(input.slug, input.visitorId);
+	return getComments(input.slug, input.visitorId, subjectType);
 }
 
 export async function deleteComment(

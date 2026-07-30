@@ -10,6 +10,7 @@ import path from "path";
 import { cache } from "react";
 import readingTime from "reading-time";
 import rehypeEmbeds from "@/lib/rehype-embeds";
+import rehypeTerms from "@/lib/rehype-terms";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypePrettyCode from "rehype-pretty-code";
@@ -32,6 +33,8 @@ export type PostMetadata = {
 	art?: string;
 	/** Broad grouping, e.g. "Engineering". Mirrored into the posts table. */
 	category?: string;
+	/** Jargon definitions, keyed by the name used in `[label](term:key)`. */
+	terms: Record<string, string>;
 	/** Shape of the piece: essay, tutorial, note. Mirrored into the posts table. */
 	kind?: string;
 	tags: string[];
@@ -84,6 +87,14 @@ function normalize(raw: Record<string, unknown>, slug: string): PostMetadata {
 		// Normalised on the way in, so the column and the frontmatter always
 		// agree on spelling. The title-case label is applied at render time.
 		category: raw.category ? categorySlug(String(raw.category)) : undefined,
+		terms:
+			raw.terms && typeof raw.terms === "object" && !Array.isArray(raw.terms)
+				? Object.fromEntries(
+						Object.entries(raw.terms as Record<string, unknown>).map(
+							([key, value]) => [key, String(value)]
+						)
+					)
+				: {},
 		kind: raw.kind ? String(raw.kind) : undefined,
 		tags,
 		draft: raw.draft === true,
@@ -91,7 +102,10 @@ function normalize(raw: Record<string, unknown>, slug: string): PostMetadata {
 	};
 }
 
-export async function markdownToHTML(markdown: string) {
+export async function markdownToHTML(
+	markdown: string,
+	terms: Record<string, string> = {}
+) {
 	const file = await unified()
 		.use(remarkParse)
 		.use(remarkGfm)
@@ -99,6 +113,7 @@ export async function markdownToHTML(markdown: string) {
 		// Before rehype-pretty-code on purpose: mermaid fences have to be lifted
 		// out while their source is still plain text, not shiki spans.
 		.use(rehypeEmbeds)
+		.use(rehypeTerms, { terms })
 		.use(rehypeSlug)
 		.use(rehypeAutolinkHeadings, {
 			behavior: "wrap",
@@ -164,11 +179,12 @@ export const getPost = cache(async (slug: string): Promise<Post | null> => {
 
 	const raw = fs.readFileSync(filePath, "utf-8");
 	const { content, data } = matter(raw);
+	const metadata = normalize(data, slug);
 
 	return {
 		slug,
-		metadata: normalize(data, slug),
-		source: await markdownToHTML(content),
+		metadata,
+		source: await markdownToHTML(content, metadata.terms),
 		readingTime: Math.max(1, Math.ceil(readingTime(content).minutes)),
 		headings: extractHeadings(content),
 	};

@@ -18,14 +18,26 @@ import { cn } from "@/lib/utils";
  */
 const ScrollArea = React.forwardRef<
 	React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+		/**
+		 * Forwarded to the inner viewport. Radix nests the real scrolling
+		 * element two levels down, so anything that needs to find it (a scroll
+		 * listener, a `data-` hook) has to be able to tag it from outside.
+		 */
+		viewportProps?: React.ComponentPropsWithoutRef<
+			typeof ScrollAreaPrimitive.Viewport
+		>;
+	}
+>(({ className, children, viewportProps, ...props }, ref) => (
 	<ScrollAreaPrimitive.Root
 		ref={ref}
 		className={cn("relative overflow-hidden", className)}
 		{...props}
 	>
-		<ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+		<ScrollAreaPrimitive.Viewport
+			className="h-full w-full rounded-[inherit]"
+			{...viewportProps}
+		>
 			{children}
 		</ScrollAreaPrimitive.Viewport>
 		<ScrollBar />

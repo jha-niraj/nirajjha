@@ -23,6 +23,8 @@ const UA =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 const TIMEOUT = 15000;
+const RETRIES = 3;
+const RETRY_DELAY = 1200;
 
 const only = process.argv[2];
 const dir = path.join(process.cwd(), "content");
@@ -67,7 +69,7 @@ function extractUrls(md) {
 	return urls;
 }
 
-async function probe(url) {
+async function attempt(url) {
 	const opts = {
 		redirect: "follow",
 		headers: { "User-Agent": UA, Accept: "*/*" },
@@ -83,6 +85,25 @@ async function probe(url) {
 	} catch (error) {
 		return { status: 0, error: error.message };
 	}
+}
+
+/**
+ * Retries on transport failures only.
+ *
+ * This script gates a deploy, so a DNS blip or a timeout on one of fifty
+ * concurrent requests must not report a perfectly good link as broken. An HTTP
+ * status of any kind is an answer and is taken at face value; only status 0,
+ * which means the request never completed, is worth asking again.
+ */
+async function probe(url) {
+	for (let i = 0; i < RETRIES; i++) {
+		const result = await attempt(url);
+		if (result.status !== 0) return result;
+		if (i < RETRIES - 1) {
+			await new Promise((r) => setTimeout(r, RETRY_DELAY * (i + 1)));
+		}
+	}
+	return attempt(url);
 }
 
 let failed = 0;

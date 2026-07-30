@@ -93,7 +93,12 @@
 		font-weight: 600;
 	}
 
-	:focus-visible {
+	/* Global focus ring, but not on text fields. An input or textarea already
+	   signals focus through its own container border, and stacking a 2px
+	   offset ring on top of that draws a hard box around the composer that
+	   reads as an error state. Anything that opts out is responsible for its
+	   own visible focus. */
+	:focus-visible:not(input, textarea, select, [contenteditable]) {
 		@apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
 	}
 
@@ -271,16 +276,6 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	width: 100%;
 }
 
-@media (min-width: 1280px) {
-	/* Breaks out of the 68ch measure by a little. Text stays readable at its
-	   own width while figures get the room they need. */
-	.prose .embed {
-		width: calc(100% + 6rem);
-		margin-left: -3rem;
-		margin-right: -3rem;
-	}
-}
-
 .prose .embed-caption {
 	margin-top: 0.75rem;
 	text-align: center;
@@ -368,45 +363,99 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	display: block;
 }
 
-/* --- Mermaid ------------------------------------------------------------- */
+/* --- Mermaid -------------------------------------------------------------
+   Both embeds used to break out of the prose column with negative margins on
+   wide screens. That put them underneath the sticky contents rail, which sits
+   in the left grid column: the figure won the overlap and the rail disappeared
+   behind it. Figures now stay inside the measure and scroll internally when
+   they are too wide, which is the only version that cannot collide with the
+   layout. */
 
 .prose .mermaid-host {
 	display: block;
 	width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	/* Reserved up front so the article does not jump when the diagram lands. */
+	min-height: 340px;
+}
+
+/* Before React takes over, the mermaid source is the fallback and needs a box
+   of its own. Once the figure mounts, .mermaid-host is just a container. */
+.prose .mermaid-host[data-state="pending"] {
 	overflow-x: auto;
 	border-radius: 0.875rem;
 	border: 1px solid hsl(var(--border));
 	background: hsl(var(--card));
 	padding: 1.75rem 1.25rem;
-	/* Enough room that the article does not jump when the SVG lands. */
 	min-height: 180px;
 }
 
-/* A diagram is only useful if its labels are readable, and the prose column is
-   deliberately narrow. On wide screens the host breaks out of that column
-   rather than scaling the text down to fit it; below that it scrolls inside
-   itself, so the page body never scrolls sideways. */
-@media (min-width: 1024px) {
-	.prose .mermaid-host {
-		width: calc(100% + 8rem);
-		margin-left: -4rem;
-		margin-right: -4rem;
-	}
+/* --- the viewport ---------------------------------------------------------- */
+
+.diagram-frame {
+	position: relative;
+	overflow: hidden;
+	border-radius: 0.875rem;
+	border: 1px solid hsl(var(--border));
+	background: hsl(var(--card));
+	/* Fixed viewport rather than a box that grows to fit: a twenty-node
+	   flowchart and a three-node one occupy the same space in the article. */
+	height: clamp(340px, 55vh, 560px);
+	/* The dotted field the diagram floats on. */
+	background-image: radial-gradient(
+		hsl(var(--foreground) / 0.13) 1px,
+		transparent 1px
+	);
+	background-size: 16px 16px;
+	background-position: -8px -8px;
 }
+
+/* Full screen sizes itself from the overlay's inset, not the article clamp. */
+.diagram-frame-full {
+	height: auto;
+	background-color: hsl(var(--background));
+}
+
+/* react-zoom-pan-pinch sizes both of these to their content by default, which
+   collapses the viewport. They have to fill the frame for centring to have
+   anything to centre against. */
+.diagram-viewport {
+	width: 100% !important;
+	height: 100% !important;
+	cursor: grab;
+}
+
+.diagram-viewport:active {
+	cursor: grabbing;
+}
+
+.diagram-content {
+	width: 100%;
+	height: 100%;
+}
+
+.diagram-svg {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.5rem;
+}
+
+.prose .diagram-svg svg {
+	display: block;
+	margin: 0;
+	max-width: none;
+	height: auto;
+	/* Text selection fights drag-to-pan. */
+	user-select: none;
+}
+
 
 .prose .mermaid-host[data-state="ready"] {
 	/* Fades in once drawn, so the swap from source to diagram is not a flash. */
 	animation: embed-fade-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Rendered at mermaid's natural size, not squeezed into the column: shrinking
-   the SVG shrinks its labels with it, and an unreadable diagram is worse than
-   no diagram. Anything too wide scrolls in the host above. */
-.prose .mermaid-host svg {
-	display: block;
-	margin: 0 auto;
-	max-width: none;
-	height: auto;
 }
 
 /* The source is the no-JavaScript fallback and the input the renderer reads
@@ -482,14 +531,17 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 @keyframes dialog-in {
 	from {
 		opacity: 0;
-		transform: translate(-50%, -50%) scale(0.82);
+		transform: translate(-50%, calc(-50% + 14px)) scale(0.94);
+		filter: blur(8px);
 	}
-	60% {
+	55% {
 		opacity: 1;
+		filter: blur(0);
 	}
 	to {
 		opacity: 1;
 		transform: translate(-50%, -50%) scale(1);
+		filter: blur(0);
 	}
 }
 
@@ -497,15 +549,17 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	from {
 		opacity: 1;
 		transform: translate(-50%, -50%) scale(1);
+		filter: blur(0);
 	}
 	to {
 		opacity: 0;
-		transform: translate(-50%, -50%) scale(0.9);
+		transform: translate(-50%, calc(-50% + 8px)) scale(0.96);
+		filter: blur(4px);
 	}
 }
 
 .animate-dialog-overlay-in {
-	animation: dialog-overlay-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	animation: dialog-overlay-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .animate-dialog-overlay-out {
@@ -513,8 +567,37 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 }
 
 .animate-dialog-in {
-	/* Slight overshoot, so it settles rather than stopping dead. */
-	animation: dialog-in 260ms cubic-bezier(0.34, 1.42, 0.64, 1);
+	/* Longer than the overlay and on a decelerating curve, so the panel arrives
+	   after the backdrop has started dimming and settles rather than snapping. */
+	animation: dialog-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The panel's contents follow the panel in, one beat behind, so the dialog
+   reads as composing itself instead of appearing fully formed. Applied to the
+   direct children of a `.dialog-stagger` container. */
+.dialog-stagger > * {
+	animation: dialog-child-in 460ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.dialog-stagger > *:nth-child(1) {
+	animation-delay: 90ms;
+}
+.dialog-stagger > *:nth-child(2) {
+	animation-delay: 160ms;
+}
+.dialog-stagger > *:nth-child(3) {
+	animation-delay: 220ms;
+}
+
+@keyframes dialog-child-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .animate-dialog-out {
@@ -530,6 +613,10 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 	}
 	.animate-dialog-out {
 		animation-name: dialog-overlay-out;
+	}
+	/* No stagger, no drift: the contents are simply there. */
+	.dialog-stagger > * {
+		animation: none;
 	}
 }
 
@@ -958,129 +1045,207 @@ html[data-theme-transition] .theme-vt-glass {
 	}
 }
 
-/* ── Footer signature: chromatic-split glitch on hover ─────────────────────── */
+/* ---------------------------------------------------------------------------
+   Reading aids
+   Defined terms and copy-link-to-heading. Both are planted server side and
+   upgraded on the client, so both have to look right before their JavaScript
+   arrives.
+   --------------------------------------------------------------------------- */
 
-/* Three stacked copies of one string. The offset layers come from
-   content: attr(data-text), so the text itself exists once in the DOM and a
-   screen reader announces it once. Pseudo-elements are never announced. */
-
-.signature-glitch {
-	position: relative;
-	display: inline-block;
-	isolation: isolate;
-	/* The layers sit exactly on top, so the element must not collapse to the
-	   union of three offset boxes. */
-	white-space: nowrap;
-}
-
-.signature-glitch::before,
-.signature-glitch::after {
-	content: attr(data-text);
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	opacity: 0;
-	/* No colour: the palette is achromatic, so the split reads through offset
-	   and opacity instead of the usual red/cyan fringing. */
+/* The server-rendered span, and the button the client swaps in, are styled
+   identically so the upgrade is invisible. */
+.prose .term,
+.prose .term-trigger {
+	font: inherit;
 	color: hsl(var(--foreground));
-	transition: opacity 180ms ease;
+	background: none;
+	border: 0;
+	padding: 0;
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 4px;
+	text-decoration-color: hsl(var(--foreground) / 0.45);
+	transition: text-decoration-color 200ms ease;
 }
 
-.signature-glitch:hover::before,
-.signature-glitch:focus-visible::before {
-	opacity: 0.55;
-	animation: signature-split-a 900ms steps(2, end) infinite;
+.prose .term-trigger {
+	cursor: help;
 }
 
-.signature-glitch:hover::after,
-.signature-glitch:focus-visible::after {
-	opacity: 0.4;
-	animation: signature-split-b 900ms steps(2, end) infinite;
+.prose .term-trigger:hover,
+.prose .term-trigger:focus-visible {
+	text-decoration-color: hsl(var(--foreground));
 }
 
-/* The base layer jitters a fraction of the offset copies, which keeps the word
-   readable while the edges tear. */
-.signature-glitch:hover,
-.signature-glitch:focus-visible {
-	animation: signature-jitter 900ms steps(2, end) infinite;
+/* --- Copy link to heading ------------------------------------------------- */
+
+.prose :where(h2, h3) {
+	position: relative;
 }
 
-@keyframes signature-split-a {
+.heading-copy {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	margin-left: 0.5rem;
+	height: 1.6rem;
+	width: 1.6rem;
+	border-radius: 0.5rem;
+	border: 0;
+	background: transparent;
+	color: hsl(var(--muted-foreground));
+	cursor: pointer;
+	opacity: 0;
+	transition:
+		opacity 160ms ease,
+		color 160ms ease,
+		background-color 160ms ease;
+}
+
+.heading-copy svg {
+	height: 0.9rem;
+	width: 0.9rem;
+}
+
+/* Revealed on heading hover, but always present for keyboard users the moment
+   it takes focus. Hiding it from focus would make it unreachable. */
+.prose :where(h2, h3):hover .heading-copy,
+.heading-copy:focus-visible {
+	opacity: 1;
+}
+
+.heading-copy:hover {
+	background: hsl(var(--muted));
+	color: hsl(var(--foreground));
+}
+
+.heading-copy[data-copied="true"] {
+	opacity: 1;
+	color: hsl(var(--foreground));
+}
+
+@media (hover: none) {
+	/* No hover on touch, so there is nothing to reveal it. Show it faintly
+	   rather than shipping a control nobody can reach. */
+	.heading-copy {
+		opacity: 0.45;
+	}
+}
+
+/* Typing indicator in the assistant thread. */
+@keyframes chat-dot {
 	0%,
+	60%,
 	100% {
-		transform: translate(0, 0);
-		clip-path: inset(0 0 62% 0);
+		opacity: 0.3;
+		transform: translateY(0);
 	}
-	20% {
-		transform: translate(-2px, -1px);
-		clip-path: inset(0 0 62% 0);
-	}
-	40% {
-		transform: translate(2px, 1px);
-		clip-path: inset(48% 0 22% 0);
-	}
-	60% {
-		transform: translate(-1px, 1px);
-		clip-path: inset(18% 0 54% 0);
-	}
-	80% {
-		transform: translate(1px, -1px);
-		clip-path: inset(70% 0 0 0);
+	30% {
+		opacity: 1;
+		transform: translateY(-2px);
 	}
 }
 
-@keyframes signature-split-b {
-	0%,
-	100% {
-		transform: translate(0, 0);
-		clip-path: inset(66% 0 0 0);
-	}
-	20% {
-		transform: translate(2px, 1px);
-		clip-path: inset(66% 0 0 0);
-	}
-	40% {
-		transform: translate(-2px, -1px);
-		clip-path: inset(26% 0 46% 0);
-	}
-	60% {
-		transform: translate(1px, -1px);
-		clip-path: inset(58% 0 14% 0);
-	}
-	80% {
-		transform: translate(-1px, 1px);
-		clip-path: inset(0 0 76% 0);
-	}
+/* ---------------------------------------------------------------------------
+   Footer wordmark
+   The name across the bottom of the footer, cropped at the baseline and faded
+   into the page. Hovering distorts only what the cursor is over: signature.tsx
+   writes a per-character --w-* set on pointer move and this consumes them.
+   --------------------------------------------------------------------------- */
+
+.wordmark {
+	display: block;
+	/* Crops the descenders so the wordmark reads as the page running out
+	   rather than as oversized text sitting in a box. */
+	overflow: hidden;
+	line-height: 0.8;
+	margin-bottom: -0.1em;
+	font-family: var(--font-display), Georgia, serif;
+	font-style: normal;
+	font-weight: 400;
+	letter-spacing: -0.015em;
+	/* Sized off the viewport so it spans the column at any width. */
+	font-size: clamp(3rem, 14vw, 11.5rem);
+	white-space: nowrap;
+	cursor: default;
 }
 
-@keyframes signature-jitter {
-	0%,
-	100% {
-		transform: translate(0, 0);
-	}
-	40% {
-		transform: translate(0.5px, -0.5px);
-	}
-	70% {
-		transform: translate(-0.5px, 0.5px);
-	}
+.wordmark-chars {
+	display: flex;
+	justify-content: space-between;
+	white-space: pre;
 }
 
-/* A glitch is exactly the kind of motion this is meant to suppress. The
-   signature still lifts to full contrast so hover stays legible as a state. */
+.wordmark-char {
+	display: inline-block;
+	color: hsl(var(--foreground) / var(--w-ink, 0.16));
+	transform: translate(var(--w-push, 0), var(--w-lift, 0))
+		scale(var(--w-scale, 1));
+	filter: blur(var(--w-blur, 0));
+	will-change: transform, filter;
+	/* Short enough to feel attached to the cursor, long enough that the bulge
+	   trails rather than snaps. */
+	transition:
+		transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
+		filter 340ms cubic-bezier(0.22, 1, 0.36, 1),
+		color 340ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
-	.signature-glitch:hover,
-	.signature-glitch:focus-visible,
-	.signature-glitch:hover::before,
-	.signature-glitch:focus-visible::before,
-	.signature-glitch:hover::after,
-	.signature-glitch:focus-visible::after {
-		animation: none;
+	/* The effect is not applied at all in this case (signature.tsx returns
+	   early), so this only has to make the static state deliberate. */
+	.wordmark-char {
+		transition: none;
+		color: hsl(var(--foreground) / 0.18);
 	}
-	.signature-glitch:hover::before,
-	.signature-glitch:focus-visible::before,
-	.signature-glitch:hover::after,
-	.signature-glitch:focus-visible::after {
+}
+
+@media (max-width: 640px) {
+	.wordmark {
+		line-height: 0.88;
+	}
+}
+
+/* Sheet: slides in from the right edge. Separate from the dialog keyframes
+   because a panel that scales from its centre reads as a modal, not a drawer. */
+@keyframes sheet-in {
+	from {
 		opacity: 0;
+		transform: translateX(24px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes sheet-out {
+	from {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+}
+
+.animate-sheet-in {
+	animation: sheet-in 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-sheet-out {
+	animation: sheet-out 200ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animate-sheet-in,
+	.animate-sheet-out {
+		animation-name: dialog-overlay-in;
+	}
+	.animate-sheet-out {
+		animation-name: dialog-overlay-out;
 	}
 }

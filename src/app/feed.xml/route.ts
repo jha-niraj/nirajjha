@@ -25,7 +25,7 @@ export async function GET() {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>${escape(`${DATA.shortName}, Blog`)}</title>
-    <link>${SITE}/blogs</link>
+    <link>${SITE}</link>
     <description>Writing on shipping AI products, full-stack engineering, and the decisions that hold up after launch.</description>
     <language>en</language>
     <lastBuildDate>${updated}</lastBuildDate>

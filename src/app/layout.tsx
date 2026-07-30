@@ -1,6 +1,3 @@
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
-import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,13 +9,37 @@ import {
 	SITE_URL,
 } from "@/lib/site";
 import type { Metadata, Viewport } from "next";
-import { Inter as FontSans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const fontSans = FontSans({
-	subsets: ["latin"],
+/**
+ * Self-hosted rather than `next/font/google`.
+ *
+ * The Google loader fetches the stylesheet and the woff2 at build time, so any
+ * network hiccup, proxy, or offline build prints "Failed to download Inter from
+ * Google Fonts. Using fallback font instead." and silently ships the wrong
+ * typeface. The files are 48kB and 15kB; committing them removes an external
+ * dependency from every build and every dev server start.
+ */
+const fontSans = localFont({
+	src: "./fonts/Inter-Variable-latin.woff2",
 	variable: "--font-sans",
 	display: "swap",
+	weight: "100 900",
+	// Metric-matched to Inter, so the swap when it loads does not reflow.
+	adjustFontFallback: "Arial",
+	fallback: ["system-ui", "-apple-system", "Segoe UI", "Helvetica", "sans-serif"],
+});
+
+/** Display face, used only for the footer wordmark. */
+const fontDisplay = localFont({
+	src: "./fonts/InstrumentSerif-Regular-latin.woff2",
+	variable: "--font-display",
+	display: "swap",
+	weight: "400",
+	// Decorative and below the fold, so it must never block first paint.
+	preload: false,
+	fallback: ["Georgia", "Times New Roman", "serif"],
 });
 
 const TITLE = `${DATA.name} - ${DATA.role}`;
@@ -109,11 +130,12 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html lang="en" suppressHydrationWarning className="h-full">
 			<body
 				className={cn(
-					"min-h-screen bg-background font-sans antialiased selection:bg-foreground selection:text-background",
-					fontSans.variable
+					"h-full bg-background font-sans antialiased selection:bg-foreground selection:text-background",
+					fontSans.variable,
+					fontDisplay.variable
 				)}
 			>
 				<ThemeProvider
@@ -122,22 +144,11 @@ export default function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
+					{/* Only the providers live here. The site chrome (header, footer,
+					    dock, assistant) belongs to the (site) group, so /admin can
+					    render a completely different shell without fighting it. */}
 					<TooltipProvider delayDuration={0}>
-						<ToastProvider>
-							<div className="flex min-h-screen flex-col px-5 pb-32 sm:px-8">
-								<SiteHeader />
-								<div className="mx-auto w-full max-w-7xl flex-1">
-									{children}
-								</div>
-								{/* The footer tracks the profile column at 5xl rather than the
-								    7xl the post pages use, so the signature and the nav line
-								    up with the content above them on the page people land on. */}
-								<div className="mx-auto w-full max-w-5xl">
-									<SiteFooter />
-								</div>
-							</div>
-							<Navbar />
-						</ToastProvider>
+						<ToastProvider>{children}</ToastProvider>
 					</TooltipProvider>
 				</ThemeProvider>
 			</body>

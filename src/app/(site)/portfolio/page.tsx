@@ -18,12 +18,12 @@ import Markdown from "react-markdown";
 const DELAY = 0.04;
 
 export const metadata: Metadata = {
-	alternates: { canonical: "/" },
+	alternates: { canonical: "/portfolio" },
 };
 
 export const revalidate = 300;
 
-export default async function Page() {
+export default async function PortfolioPage() {
 	const all = (await getBlogPosts()).slice(0, 8);
 	const slugs = all.map((p) => p.slug);
 	const [views, commentCounts] = await Promise.all([
@@ -143,7 +143,7 @@ export default async function Page() {
 							<SectionHeading
 								action={
 									<Link
-										href="/blogs"
+										href="/"
 										className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
 									>
 										All posts

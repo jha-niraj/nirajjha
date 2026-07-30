@@ -31,6 +31,10 @@ pnpm blog:sync    # mirror MDX frontmatter into the posts table (runs on postbui
 pnpm blog:broadcast          # DRY RUN: show what would be emailed
 pnpm blog:broadcast --send   # actually send
 pnpm links:check  # verify every outbound link in content/ and resume.tsx
+pnpm apply:list   # contributor applications awaiting review
+pnpm apply:show <email>
+pnpm apply:decide <email> invited|declined "reason"
+pnpm blog:lint    # check posts against docs/blog-standard.md
 ```
 
 `db:push` is intentionally not used: it needs an interactive TTY and diffs
@@ -195,6 +199,30 @@ index is `/blogs`. When adding a root-level route (e.g. `/about`), make sure no
 post slug collides with it. Old paths (`/blog`, `/notes`, `/blog/<slug>`) are
 permanently redirected in `next.config.mjs`; add a redirect rather than
 breaking a URL that is already public.
+
+### Every post follows docs/blog-standard.md
+
+**Read [docs/blog-standard.md](docs/blog-standard.md) before writing or editing
+any post.** It is the contract for what a post has to be, and `pnpm blog:lint`
+enforces the measurable half of it. A post that does not pass does not ship.
+
+The shape it requires, in order:
+
+1. **Open on the problem as a scene**, under 120 words. Not "in this post".
+2. **Explain plainly what the thing actually is**, early, with one analogy to
+   something ordinary. This is the section that gets skipped when writing and
+   needed most when reading.
+3. **Say why it matters**: what breaks, who notices.
+4. **Tell it in causal order**, not encyclopedic order.
+5. **Land the answer** once, plainly.
+6. **Close with a recap** that introduces nothing new.
+
+The hard limits: 900 to 2,000 words, 4 to 10 minutes, 12 headings, 6 code
+blocks of 25 lines each, 5 sentences per paragraph, an 80 to 200 character
+summary, at least 5 outbound links.
+
+If a post genuinely cannot fit, it is two posts. Raising a limit is almost
+never the right fix.
 
 ### Outbound links are mandatory
 

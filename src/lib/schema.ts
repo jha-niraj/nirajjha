@@ -9,8 +9,8 @@ import { SITE_URL as SITE } from "@/lib/site";
  */
 const PERSON_ID = `${SITE}/#person`;
 const WEBSITE_ID = `${SITE}/#website`;
-const PROFILE_ID = `${SITE}/#profile`;
-const BLOG_ID = `${SITE}/blogs#blog`;
+const PROFILE_ID = `${SITE}/portfolio#profile`;
+const BLOG_ID = `${SITE}/#blog`;
 
 const SAME_AS = Object.values(DATA.contact.social)
 	.filter((s) => s.navbar)
@@ -92,7 +92,7 @@ export function buildProfileGraph() {
 			{
 				"@type": "ProfilePage",
 				"@id": PROFILE_ID,
-				url: SITE,
+				url: `${SITE}/portfolio`,
 				name: `${DATA.name} - ${DATA.role}`,
 				description: DATA.description,
 				isPartOf: { "@id": WEBSITE_ID },
@@ -142,7 +142,10 @@ export function buildProfileGraph() {
 					},
 				})),
 			},
-			buildBreadcrumbList([{ name: "Home", url: SITE }]),
+			buildBreadcrumbList([
+				{ name: "Blog", url: SITE },
+				{ name: "Profile", url: `${SITE}/portfolio` },
+			]),
 		],
 	};
 }
@@ -159,7 +162,7 @@ export type PostForSchema = {
 };
 
 export function buildBlogIndexGraph(posts: readonly PostForSchema[]) {
-	const url = `${SITE}/blogs`;
+	const url = SITE;
 	return {
 		"@context": "https://schema.org",
 		"@graph": [
@@ -199,8 +202,7 @@ export function buildBlogIndexGraph(posts: readonly PostForSchema[]) {
 				})),
 			},
 			buildBreadcrumbList([
-				{ name: "Home", url: SITE },
-				{ name: "Blog", url },
+				{ name: "Blog", url: SITE },
 			]),
 		],
 	};
@@ -240,8 +242,7 @@ export function buildPostGraph(post: PostForSchema) {
 			// to resolve inside this page's graph or the rich result is rejected.
 			buildPerson(),
 			buildBreadcrumbList([
-				{ name: "Home", url: SITE },
-				{ name: "Blog", url: `${SITE}/blogs` },
+				{ name: "Blog", url: SITE },
 				{ name: post.title, url },
 			]),
 		],

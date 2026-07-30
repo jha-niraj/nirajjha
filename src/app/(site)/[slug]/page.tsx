@@ -1,8 +1,11 @@
+import { AskSelection } from "@/components/ai/ask-selection";
 import { Comments } from "@/components/comments";
 import BlurFade from "@/components/magicui/blur-fade";
 import { PostEngagementBar } from "@/components/post-engagement";
-import { PostArt } from "@/components/post-art";
 import { PostEmbeds } from "@/components/post-embeds";
+import { PostHeadings } from "@/components/post-headings";
+import { PostTerms } from "@/components/post-terms";
+import { ReadingProgress } from "@/components/reading-progress";
 import { SubscribeButton } from "@/components/subscribe-form";
 import { PostCard } from "@/components/post-card";
 import { TableOfContents } from "@/components/toc";
@@ -11,6 +14,7 @@ import { DATA } from "@/data/resume";
 import { getComments, getEngagement } from "@/db/queries";
 import { categoryLabel } from "@/lib/categories";
 import type { PostSummary } from "@/lib/post-types";
+import { rankRelated } from "@/lib/related";
 import { buildPostGraph } from "@/lib/schema";
 import { formatShortDate } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
@@ -94,9 +98,9 @@ export default async function PostPage({
 		getComments(post.slug),
 	]);
 
-	const related: PostSummary[] = all
-		.filter((p) => p.slug !== post.slug)
-		.map((p) => ({
+	// Ranked by shared category and tags, so finishing a database post offers the
+	// other database post rather than whatever happened to ship most recently.
+	const related: PostSummary[] = rankRelated(post, all).map((p) => ({
 			slug: p.slug,
 			title: p.metadata.title,
 			summary: p.metadata.summary,
@@ -109,8 +113,7 @@ export default async function PostPage({
 			outline: [],
 			views: 0,
 			comments: 0,
-		}))
-		.slice(0, 3);
+	}));
 
 	const graph = buildPostGraph({
 		slug: post.slug,
@@ -131,10 +134,12 @@ export default async function PostPage({
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
 			/>
 
+			<ReadingProgress targetId="post-article" />
+
 			<main className="pb-8">
 				<BlurFade delay={0.04}>
 					<Link
-						href="/blogs"
+						href="/"
 						className="group mb-8 inline-flex items-center gap-1.5 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
 					>
 						<ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
@@ -142,12 +147,12 @@ export default async function PostPage({
 					</Link>
 				</BlurFade>
 
-				<header className="mb-10">
+				<header className="mb-8">
 					<BlurFade delay={0.08}>
-						<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+						<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 							{post.metadata.category && (
 								<>
-									<span className="rounded-full border border-border px-2.5 py-0.5 text-foreground">
+									<span className="rounded-full border border-border px-2 py-0.5 text-foreground">
 										{categoryLabel(post.metadata.category)}
 									</span>
 									<span className="text-border">/</span>
@@ -168,32 +173,34 @@ export default async function PostPage({
 					</BlurFade>
 
 					<BlurFade delay={0.12}>
-						<h1 className="mt-4 max-w-4xl text-balance text-5xl font-semibold leading-[1.1] tracking-tighter sm:text-6xl">
+						<h1 className="mt-3.5 max-w-3xl text-balance text-[1.75rem] font-semibold leading-[1.2] tracking-tight sm:text-[2.125rem]">
 							{post.metadata.title}
 						</h1>
 					</BlurFade>
 
 					<BlurFade delay={0.16}>
-						<p className="mt-5 max-w-2xl text-xl leading-relaxed text-muted-foreground">
+						<p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
 							{post.metadata.summary}
 						</p>
 					</BlurFade>
 
-					<BlurFade delay={0.2}>
-						{/* 16/9 matches the art's 320x180 viewBox exactly. At 21/9 the
-						    SVG was letterboxed: it fitted to width and left a dead band
-						    above and below, which is why the frame looked mostly empty. */}
-						<div className="mt-8 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border">
-							<PostArt art={post.metadata.art} slug={post.slug} />
-						</div>
-					</BlurFade>
+					{/* No hero art here. The piece already identifies the post on
+					    the card and in the OG image; repeating it full width above
+					    the article pushed the first paragraph below the fold and
+					    added nothing a reader had not just seen. */}
 				</header>
 
 				{/* Contents rail on the left, article on the right. Below lg the
 				    rail collapses above the article and stops being sticky. */}
-				<div className="grid gap-10 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-14">
-					<aside className="lg:order-1">
-						<BlurFade delay={0.24}>
+				<div className="grid gap-10 lg:grid-cols-[220px_minmax(0,72ch)] lg:justify-center lg:gap-12">
+					{/* `self-start` + `h-full` on the animation wrapper is what makes
+					    the rail inside actually stick. A sticky element can only
+					    travel within its parent's box, and BlurFade renders a
+					    content-height div: without `h-full` the nav is already as
+					    tall as its parent and has nowhere to move, so it scrolls
+					    away like static content. */}
+					<aside className="lg:order-1 lg:h-full">
+						<BlurFade delay={0.24} className="lg:block lg:h-full">
 							<TableOfContents headings={post.headings} />
 						</BlurFade>
 					</aside>
@@ -201,13 +208,17 @@ export default async function PostPage({
 					<div className="min-w-0 lg:order-2">
 						<BlurFade delay={0.24}>
 							<article
+								id="post-article"
 								className="prose max-w-[68ch]"
 								dangerouslySetInnerHTML={{ __html: post.source }}
 							/>
 						</BlurFade>
-						{/* Upgrades the YouTube and mermaid placeholders inside the
-						    article above. Renders no markup of its own. */}
+						{/* All four render nothing: they walk the article DOM after
+						    paint and wire behaviour onto what the pipeline planted. */}
 						<PostEmbeds />
+						<PostTerms rootId="post-article" />
+						<PostHeadings rootId="post-article" />
+						<AskSelection rootId="post-article" />
 
 						<BlurFade delay={0.06} inView>
 							<div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-8">
