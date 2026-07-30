@@ -1,10 +1,10 @@
 import { Icons } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
 import {
-	HeartHandshakeIcon,
-	HomeIcon,
+	Building2Icon,
 	LightbulbIcon,
 	NotebookIcon,
+	UserIcon,
 } from "lucide-react";
 
 export const DATA = {
@@ -94,19 +94,26 @@ export const DATA = {
 	 * discoverable; only the target moved. `external` opens them in a new tab
 	 * rather than navigating this site away to another origin.
 	 */
+	/**
+	 * Ideas moved to BuildrHQ, which has real accounts, and BuildrHQ itself gets
+	 * a slot rather than the old Contribute link. `external` is what tells the
+	 * dock to open a new tab instead of navigating this site to another origin,
+	 * and what keeps the header's active-pill logic from trying to match an
+	 * absolute URL against a local path.
+	 */
 	navbar: [
-		{ href: "/", icon: NotebookIcon, label: "Blog" },
+		{ href: "/", icon: NotebookIcon, label: "Blogs" },
+		{ href: "/portfolio", icon: UserIcon, label: "Portfolio" },
 		{
-			href: "https://builderhq.com/ideas",
+			href: "https://buildrhq.com/ideas",
 			icon: LightbulbIcon,
 			label: "Ideas",
 			external: true,
 		},
-		{ href: "/portfolio", icon: HomeIcon, label: "Profile" },
 		{
-			href: "https://builderhq.com/contribute",
-			icon: HeartHandshakeIcon,
-			label: "Contribute",
+			href: "https://buildrhq.com",
+			icon: Building2Icon,
+			label: "BuildrHQ",
 			external: true,
 		},
 	],

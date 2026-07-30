@@ -117,8 +117,8 @@ ${DATA.credentials.map((c) => `- ${c}`).join("\n")}
 
 ${line("Profile", `${SITE}/portfolio`, "Full profile: experience, projects, stack, education")}
 ${line("Blog index", SITE, "Every post, searchable and filterable by tag")}
-${line("Ideas", "https://builderhq.com/ideas", "Open-source project ideas people want built, with voting. Hosted on BuilderHQ")}
-${line("Contribute", "https://builderhq.com/contribute", "Open-source contributor programme, and the application form. Hosted on BuilderHQ")}
+${line("Ideas", "https://buildrhq.com/ideas", "Open-source project ideas people want built, with voting. Hosted on BuildrHQ")}
+${line("BuildrHQ", "https://buildrhq.com", "The platform the ideas and contributor programme live on")}
 ${line("RSS feed", `${SITE}/feed.xml`)}
 ${line("Sitemap", `${SITE}/sitemap.xml`)}
 

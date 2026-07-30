@@ -13,10 +13,16 @@ export function SiteFooter() {
 				</p>
 				<nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
 					<Link href="/" className="transition-colors hover:text-foreground">
-						Blog
+						Blogs
 					</Link>
 					<Link
-						href="https://builderhq.com/ideas"
+						href="/portfolio"
+						className="transition-colors hover:text-foreground"
+					>
+						Portfolio
+					</Link>
+					<Link
+						href="https://buildrhq.com/ideas"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="transition-colors hover:text-foreground"
@@ -24,18 +30,12 @@ export function SiteFooter() {
 						Ideas
 					</Link>
 					<Link
-						href="/portfolio"
-						className="transition-colors hover:text-foreground"
-					>
-						Profile
-					</Link>
-					<Link
-						href="https://builderhq.com/contribute"
+						href="https://buildrhq.com"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="transition-colors hover:text-foreground"
 					>
-						Contribute
+						BuildrHQ
 					</Link>
 					<Link
 						href="/feed.xml"

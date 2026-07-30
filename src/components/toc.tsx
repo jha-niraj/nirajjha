@@ -8,6 +8,16 @@ import { useEffect, useState } from "react";
 export type Heading = { id: string; text: string; level: 2 | 3 };
 
 /**
+ * Where a heading comes to rest, measured from the top of the scroller.
+ *
+ * The sticky header sits over the article, so scrolling a heading to 0 would
+ * park it underneath. The observer's band starts at the same number on
+ * purpose: a clicked heading has to land *inside* the band that decides which
+ * item is lit, otherwise clicking one entry highlights its neighbour.
+ */
+const HEADER_OFFSET = 88;
+
+/**
  * Sticky contents rail. Highlights the section you are currently reading by
  * watching the headings themselves rather than doing scroll maths, so it stays
  * correct regardless of section length or images loading late.
@@ -51,7 +61,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
 				// Without an explicit root the observer watches the viewport, and
 				// the article no longer scrolls with the viewport.
 				root: getScrollRoot(),
-				rootMargin: "-88px 0px -55% 0px",
+				rootMargin: `-${HEADER_OFFSET}px 0px -55% 0px`,
 				threshold: 0,
 			},
 		);
@@ -59,6 +69,53 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
 		elements.forEach((el) => observer.observe(el));
 		return () => observer.disconnect();
 	}, [headings]);
+
+	/**
+	 * Scrolls the article to a heading.
+	 *
+	 * A bare `href="#id"` cannot do this. The shell is `h-screen
+	 * overflow-hidden` with the ScrollArea viewport doing the scrolling, so the
+	 * browser's native anchor jump moves that viewport in one frame with no
+	 * animation, and `scroll-behavior: smooth` on `html` never applies because
+	 * the document is not what scrolls.
+	 *
+	 * The offset is measured between the two elements' rects rather than read
+	 * from `offsetTop`, which would be relative to the nearest positioned
+	 * ancestor and is wrong as soon as anything in the article is `relative`.
+	 */
+	function scrollToHeading(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
+		// Let modified clicks (new tab, download) behave normally.
+		if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+			return;
+		}
+
+		const root = getScrollRoot();
+		const el = document.getElementById(id);
+		if (!root || !el) return;
+
+		e.preventDefault();
+
+		const top =
+			root.scrollTop +
+			el.getBoundingClientRect().top -
+			root.getBoundingClientRect().top -
+			HEADER_OFFSET;
+
+		const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		root.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
+
+		// Light it up immediately. The observer would get there on its own, but
+		// only once the scroll finishes, which reads as a lag on the click.
+		setActiveId(id);
+
+		// Keep the URL shareable without letting the browser also jump.
+		history.replaceState(null, "", `#${id}`);
+
+		// Anchor navigation normally moves focus. Preserve that for keyboard and
+		// screen reader users, without fighting the scroll we just started.
+		el.setAttribute("tabindex", "-1");
+		el.focus({ preventScroll: true });
+	}
 
 	if (headings.length < 2) return null;
 
@@ -90,6 +147,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
 							<li key={h.id}>
 								<a
 									href={`#${h.id}`}
+									onClick={(e) => scrollToHeading(e, h.id)}
 									aria-current={active ? "location" : undefined}
 									className={cn(
 										"-ml-px block border-l-2 py-1.5 text-base leading-snug transition-colors",

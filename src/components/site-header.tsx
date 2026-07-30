@@ -15,10 +15,10 @@ import { useId } from "react";
  * the active-item logic from ever trying to match them against a local path.
  */
 const NAV = [
-	{ href: "/", label: "Blog" },
-	{ href: "https://builderhq.com/ideas", label: "Ideas", external: true },
-	{ href: "/portfolio", label: "Profile" },
-	{ href: "https://builderhq.com/contribute", label: "Contribute", external: true },
+	{ href: "/", label: "Blogs" },
+	{ href: "/portfolio", label: "Portfolio" },
+	{ href: "https://buildrhq.com/ideas", label: "Ideas", external: true },
+	{ href: "https://buildrhq.com", label: "BuildrHQ", external: true },
 ];
 
 /**
@@ -75,6 +75,9 @@ export function SiteHeader() {
 								<Link
 									key={item.href}
 									href={item.href}
+									{...("external" in item && item.external
+										? { target: "_blank", rel: "noopener noreferrer" }
+										: {})}
 									aria-current={on ? "page" : undefined}
 									className={cn(
 										"relative rounded-full px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3.5",
