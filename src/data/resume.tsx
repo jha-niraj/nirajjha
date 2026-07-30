@@ -29,7 +29,7 @@ export const DATA = {
 		"I'm a Full Stack Engineer at **Creatr**, where I build the AI systems behind DeepBuild - an email pipeline wired into Gmail webhooks, M365 and MSP integrations, and a retrieval-backed pipeline for long-form reports. Before that I was the founding engineer at **EventEye**, taking an event management and discovery platform from an empty repo to 15,000+ users.\n\nOn the side I ship products: **SyncHq**, an intelligence operating system for organizations, and **Gurukul**, a multi-tenant school management platform. I care about designing the data model before writing the code, keeping AI behind guardrails instead of hoping for the best, and shipping things people actually use.",
 
 	resumeUrl:
-		"https://drive.google.com/file/d/1yKhT8_dMVJQPfFZNyK9_UWihTGHrm5Bt/view",
+		"https://drive.google.com/file/d/1YbL_SlCA4b5esl8nzIDrpEr84l-H4OoH/view",
 
 	/** Feeds the JSON-LD Person node and the metadata keyword list. */
 	seoKeywords: [

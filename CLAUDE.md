@@ -124,7 +124,12 @@ anything a reader has to read). Decorative marks and separators may go lighter.
 - The root profile pulls itself in to `max-w-5xl` on its own `<main>`, because
   it reads as one column. Narrow it there, not in the layout, or the post pages
   come with it.
+- The footer and the floating dock are `max-w-5xl` too, so they line up with the
+  profile rather than with the wider post pages. The dock's backdrop gradient
+  stays full width: it is a page-bottom fade, not part of the column.
 - Prose column inside a post is capped separately so line length stays readable.
+- The contents rail on a post is sticky and scrolls inside a `ScrollArea`, so a
+  post with thirty headings cannot run off the bottom of the screen.
 - Section headers all use `<SectionHeading>`. Do not hand-roll one.
 
 ## Theme switching

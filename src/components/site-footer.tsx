@@ -10,7 +10,12 @@ export function SiteFooter() {
 			<div className="flex flex-col gap-4 text-base text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
 				<p className="flex items-center gap-1.5">
 					<span>© {year}</span>
-					<Signature className="text-lg font-medium italic text-foreground" />
+					{/* shortName, not the full name the hero heading uses: a signature
+					    is how you sign off, not how you appear on a passport. */}
+					<Signature
+						text={DATA.shortName}
+						className="text-lg font-medium italic text-foreground"
+					/>
 				</p>
 				<nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
 					<Link href="/" className="transition-colors hover:text-foreground">

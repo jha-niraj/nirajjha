@@ -129,7 +129,10 @@ export default function RootLayout({
 								<div className="mx-auto w-full max-w-7xl flex-1">
 									{children}
 								</div>
-								<div className="mx-auto w-full max-w-7xl">
+								{/* The footer tracks the profile column at 5xl rather than the
+								    7xl the post pages use, so the signature and the nav line
+								    up with the content above them on the page people land on. */}
+								<div className="mx-auto w-full max-w-5xl">
 									<SiteFooter />
 								</div>
 							</div>

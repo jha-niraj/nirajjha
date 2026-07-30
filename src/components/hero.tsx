@@ -1,5 +1,5 @@
 import BlurFade from "@/components/magicui/blur-fade";
-import BlurFadeText from "@/components/magicui/blur-fade-text";
+import { Signature } from "@/components/signature";
 import { DATA } from "@/data/resume";
 import { ArrowUpRight, FileText, Mail, MapPin } from "lucide-react";
 import Image from "next/image";
@@ -16,15 +16,18 @@ const DELAY = 0.04;
 function Portrait() {
 	return (
 		<div className="relative shrink-0">
-			<div className="relative aspect-square w-28 overflow-hidden rounded-2xl border border-border bg-muted sm:w-36">
-				<span className="absolute inset-0 flex items-center justify-center text-4xl font-semibold tracking-tight text-muted-foreground/60">
+			<div className="relative aspect-square w-40 overflow-hidden rounded-2xl border border-border bg-muted sm:w-52 lg:w-60">
+				<span className="absolute inset-0 flex items-center justify-center text-5xl font-semibold tracking-tight text-muted-foreground/60">
 					{DATA.initials}
 				</span>
+				{/* `sizes` has to track the widths above. Understating it makes Next
+				    serve a source image narrower than the frame, which then gets
+				    upscaled and looks soft on exactly the one photo on the page. */}
 				<Image
 					src={DATA.avatarUrl}
 					alt={`${DATA.name} - ${DATA.role}`}
 					fill
-					sizes="(min-width: 640px) 144px, 112px"
+					sizes="(min-width: 1024px) 240px, (min-width: 640px) 208px, 160px"
 					className="relative object-cover"
 					priority
 				/>
@@ -55,18 +58,18 @@ export function Hero() {
 					</BlurFade>
 
 					<div className="space-y-3">
-						<BlurFadeText
-							as="h1"
-							delay={DELAY * 2}
-							yOffset={8}
-							className="text-5xl font-semibold tracking-tighter sm:text-6xl"
-							text={DATA.name}
-						/>
+						{/* BlurFadeText animates per character, which cannot carry the
+						    glitch: the effect needs one element holding the whole string
+						    so the three offset copies line up. Fading the block instead
+						    keeps the entrance and lets the name glitch on hover. */}
+						<BlurFade delay={DELAY * 2} yOffset={8}>
+							<h1 className="text-5xl font-semibold tracking-tighter sm:text-6xl">
+								<Signature text={DATA.name} />
+							</h1>
+						</BlurFade>
 						<BlurFade delay={DELAY * 3}>
 							<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-muted-foreground">
-								<span className="font-medium text-foreground">
-									{DATA.role}
-								</span>
+								<span className="font-medium text-foreground">{DATA.role}</span>
 								<span className="text-border">/</span>
 								<Link
 									href={DATA.locationLink}

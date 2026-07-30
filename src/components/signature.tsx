@@ -1,31 +1,35 @@
-"use client";
-
+import { DATA } from "@/data/resume";
 import { cn } from "@/lib/utils";
 
 /**
- * The signature in the footer, with a chromatic-split glitch on hover.
+ * The name, with a chromatic-split glitch on hover. Used twice: as the hero
+ * heading and as the signature in the footer.
  *
- * The effect is three stacked copies of the same text. The two `::before` and
- * `::after` layers are driven by CSS custom properties and stay perfectly still
- * until hover, so nothing moves for a reader who is only passing over the
- * footer on the way somewhere else.
+ * The effect is three stacked copies of the same string. The `::before` and
+ * `::after` layers sit perfectly still until hover, so nothing moves for
+ * someone who is only passing over on the way somewhere else.
  *
- * The layers are built with `content: attr(data-text)`, which means the string
- * lives in exactly one place. Duplicating it into markup would leave three
- * copies for a screen reader to read out; the pseudo-elements are `aria-hidden`
- * by construction, so only the real text node is announced.
+ * Both layers are built with `content: attr(data-text)`, so the string lives in
+ * exactly one place. Duplicating it into markup would leave three copies for a
+ * screen reader to read out; pseudo-elements are never announced, so only the
+ * real text node is.
  *
- * The site palette is strictly achromatic, so the offset copies are separated
- * by opacity and position rather than by the red and cyan a glitch effect
- * usually reaches for.
+ * The palette is strictly achromatic, so the offset copies separate by position
+ * and opacity rather than by the red and cyan fringing a glitch usually uses.
+ *
+ * No `"use client"`: this is pure CSS with no state or handlers, so it stays a
+ * server component and ships no JavaScript.
  */
-export function Signature({ className }: { className?: string }) {
+export function Signature({
+	text = DATA.name,
+	className,
+}: {
+	text?: string;
+	className?: string;
+}) {
 	return (
-		<span
-			data-text="Niraj Jha"
-			className={cn("signature-glitch", className)}
-		>
-			Niraj Jha
+		<span data-text={text} className={cn("signature-glitch", className)}>
+			{text}
 		</span>
 	);
 }
