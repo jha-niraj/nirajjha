@@ -17,8 +17,26 @@ import Markdown from "react-markdown";
 
 const DELAY = 0.04;
 
+/**
+ * The root layout declares `openGraph.url` as the site origin, and Next merges
+ * rather than replaces, so without an explicit url here every share of this page
+ * previewed as the homepage. Same for the canonical: the layout sets "/".
+ */
 export const metadata: Metadata = {
+	title: `${DATA.name}, ${DATA.role}`,
+	description: DATA.description,
 	alternates: { canonical: "/portfolio" },
+	openGraph: {
+		type: "profile",
+		title: `${DATA.name}, ${DATA.role}`,
+		description: DATA.description,
+		url: "/portfolio",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: `${DATA.name}, ${DATA.role}`,
+		description: DATA.description,
+	},
 };
 
 export const revalidate = 300;

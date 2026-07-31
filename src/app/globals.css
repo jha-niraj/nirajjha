@@ -1162,7 +1162,7 @@ html[data-theme-transition] .theme-vt-glass {
 	overflow: hidden;
 	line-height: 0.8;
 	margin-bottom: -0.1em;
-	font-family: var(--font-display), Georgia, serif;
+	font-family: var(--font-wordmark), Georgia, serif;
 	font-style: normal;
 	font-weight: 400;
 	letter-spacing: -0.015em;
@@ -1247,5 +1247,212 @@ html[data-theme-transition] .theme-vt-glass {
 	}
 	.animate-sheet-out {
 		animation-name: dialog-overlay-out;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Display headings
+   Bricolage Grotesque, on the biggest heading of a page and nothing else.
+   Body copy, section headers and every h2/h3 inside an article stay on Inter:
+   a display face is a signal, and a signal applied to everything is noise.
+   --------------------------------------------------------------------------- */
+
+.display-heading {
+	font-family: var(--font-display), system-ui, sans-serif;
+	/* Bricolage sets wide by default. Pulling it in is what makes it read as a
+	   masthead rather than as large body text. */
+	letter-spacing: -0.03em;
+	font-weight: 600;
+	/* The optical-size axis is why this face is worth self-hosting: at a
+	   heading size it thins the strokes and tightens the joins instead of
+	   scaling up letterforms drawn for 16px. */
+	font-variation-settings: "opsz" 40;
+}
+
+/* Anything genuinely large gets the top of the optical range. */
+.display-heading-xl {
+	font-variation-settings: "opsz" 72;
+	letter-spacing: -0.04em;
+}
+
+/* ---------------------------------------------------------------------------
+   404 artwork
+   A probe walks the segments that resolved and dies at the gap. One 5s loop
+   drives everything, so the sparks fire exactly when the probe arrives rather
+   than drifting out of sync the way independent delays eventually do.
+   --------------------------------------------------------------------------- */
+
+.not-found-art {
+	width: 100%;
+	max-width: 26rem;
+	height: auto;
+	color: hsl(var(--foreground));
+}
+
+/* The resolved stretch draws itself once, then stays put. */
+.nf-rail {
+	stroke-dasharray: 160;
+	stroke-dashoffset: 160;
+	animation: nf-rail-draw 1.1s ease-out 0.15s forwards;
+}
+
+@keyframes nf-rail-draw {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+.nf-node {
+	opacity: 0;
+	animation: nf-node-in 0.5s ease-out forwards;
+	animation-delay: calc(0.35s + var(--i) * 0.22s);
+}
+
+@keyframes nf-node-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* The segment that is missing. Never quite settles. */
+.nf-ghost {
+	opacity: 0.28;
+	transform-origin: 311px 110px;
+	animation: nf-ghost-pulse 3.4s ease-in-out 1.2s infinite;
+}
+
+@keyframes nf-ghost-pulse {
+	0%,
+	100% {
+		opacity: 0.24;
+		transform: scale(0.97);
+	}
+	50% {
+		opacity: 0.5;
+		transform: scale(1);
+	}
+}
+
+/*
+ * Travels the 160px of solid rail, then carries a little way into the fray
+ * while shrinking, because a probe that stopped dead at the last segment would
+ * read as "arrived" rather than "ran out".
+ */
+.nf-probe {
+	animation: nf-probe-run 5s cubic-bezier(0.4, 0, 0.6, 1) 1.1s infinite;
+	opacity: 0;
+}
+
+@keyframes nf-probe-run {
+	0% {
+		transform: translateX(0) scale(0.7);
+		opacity: 0;
+	}
+	8% {
+		transform: translateX(0) scale(1);
+		opacity: 1;
+	}
+	52% {
+		transform: translateX(160px) scale(1);
+		opacity: 1;
+	}
+	64% {
+		transform: translateX(196px) scale(0.75);
+		opacity: 0.5;
+	}
+	72%,
+	100% {
+		transform: translateX(214px) scale(0.2);
+		opacity: 0;
+	}
+}
+
+.nf-spark {
+	opacity: 0;
+	animation: nf-spark-out 5s ease-out 1.1s infinite;
+	animation-delay: calc(1.1s + var(--i) * 0.05s);
+}
+
+@keyframes nf-spark-out {
+	0%,
+	54% {
+		opacity: 0;
+		transform: translate(0, 0) scale(0.5);
+	}
+	60% {
+		opacity: 0.75;
+		transform: translate(calc(var(--dx) * 0.35), calc(var(--dy) * 0.35)) scale(1);
+	}
+	78%,
+	100% {
+		opacity: 0;
+		transform: translate(var(--dx), var(--dy)) scale(0.2);
+	}
+}
+
+/* The watermark sits behind the art and is decorative only. */
+.nf-watermark {
+	font-family: var(--font-display), system-ui, sans-serif;
+	font-variation-settings: "opsz" 96;
+	font-weight: 700;
+	letter-spacing: -0.05em;
+	line-height: 1;
+	color: hsl(var(--foreground));
+	opacity: 0.05;
+	animation: nf-watermark-in 1.2s ease-out both;
+}
+
+@keyframes nf-watermark-in {
+	from {
+		opacity: 0;
+		transform: scale(1.04);
+	}
+	to {
+		opacity: 0.05;
+		transform: scale(1);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/*
+	 * Static pose: the rail is drawn, the segments are there, and the probe is
+	 * parked at the break at half strength. That still says "it got this far and
+	 * stopped", which is the whole point of the picture.
+	 */
+	.nf-rail {
+		stroke-dashoffset: 0;
+		animation: none;
+	}
+
+	.nf-node {
+		opacity: 1;
+		animation: none;
+	}
+
+	.nf-ghost {
+		opacity: 0.34;
+		animation: none;
+	}
+
+	.nf-probe {
+		opacity: 0.5;
+		transform: translateX(178px) scale(0.85);
+		animation: none;
+	}
+
+	.nf-spark {
+		opacity: 0.3;
+		transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.6)) scale(0.6);
+		animation: none;
+	}
+
+	.nf-watermark {
+		opacity: 0.05;
+		animation: none;
 	}
 }

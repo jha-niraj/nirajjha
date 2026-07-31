@@ -31,10 +31,32 @@ const fontSans = localFont({
 	fallback: ["system-ui", "-apple-system", "Segoe UI", "Helvetica", "sans-serif"],
 });
 
-/** Display face, used only for the footer wordmark. */
+/**
+ * Display face for big headings.
+ *
+ * Bricolage Grotesque, self-hosted rather than pulled through
+ * `next/font/google`. The Google loader fetches the file at build time, and
+ * when that fetch fails it does not fail the build: it prints a warning and
+ * silently ships the fallback, which is the exact bug that was hit with Inter
+ * earlier. `next/font/local` gives the identical API and `--font-display`
+ * variable with no network dependency.
+ *
+ * Variable on both axes (optical size 12-96, weight 200-800), so a 48px title
+ * and a 14rem wordmark each get letterforms drawn for their size rather than
+ * one master scaled up.
+ */
 const fontDisplay = localFont({
-	src: "./fonts/InstrumentSerif-Regular-latin.woff2",
+	src: "./fonts/BricolageGrotesque-Variable-latin.woff2",
 	variable: "--font-display",
+	display: "swap",
+	weight: "200 800",
+	fallback: ["system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+});
+
+/** The footer wordmark only. Kept separate so headings can change without it. */
+const fontWordmark = localFont({
+	src: "./fonts/InstrumentSerif-Regular-latin.woff2",
+	variable: "--font-wordmark",
 	display: "swap",
 	weight: "400",
 	// Decorative and below the fold, so it must never block first paint.
@@ -135,7 +157,8 @@ export default function RootLayout({
 				className={cn(
 					"h-full bg-background font-sans antialiased selection:bg-foreground selection:text-background",
 					fontSans.variable,
-					fontDisplay.variable
+					fontDisplay.variable,
+					fontWordmark.variable
 				)}
 			>
 				<ThemeProvider

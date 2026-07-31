@@ -5,15 +5,19 @@ import type { MetadataRoute } from "next";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 	const posts = await getBlogPosts();
 
-	// The profile is a single page, so the homepage's freshness is really the
-	// freshness of the newest thing published anywhere on the site.
-	const latest = posts.reduce<string>(
-		(max, p) => {
+	// The homepage's freshness is the freshness of the newest thing published
+	// anywhere on the site.
+	//
+	// Seeded with the empty string, not with today. Seeding the max with today's
+	// date meant no published date could ever beat it, so every crawl was told
+	// the homepage had changed that morning. Claiming daily freshness for a page
+	// that has not moved in weeks is the fastest way to teach a crawler to stop
+	// believing lastModified at all.
+	const latest =
+		posts.reduce<string>((max, p) => {
 			const d = p.metadata.updatedAt ?? p.metadata.publishedAt;
 			return d > max ? d : max;
-		},
-		new Date().toISOString().slice(0, 10)
-	);
+		}, "") || new Date().toISOString().slice(0, 10);
 
 	return [
 		{

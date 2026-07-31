@@ -73,6 +73,8 @@ ${DATA.name} (also written Niraj Jha) is a ${DATA.role} based in ${DATA.location
 
 Every post below is linked as a \`.md\` file. Fetch that URL to get the full markdown source of the post, including code blocks and tables, with no HTML to parse. The same page in HTML is at the same path without the \`.md\` suffix.
 
+If you would rather take the whole site in one request than follow the links below, fetch ${SITE}/llms-full.txt. It inlines the complete text of every post plus the profile in a single plain-text document.
+
 Contact: ${DATA.contact.email}
 Website: ${SITE}
 GitHub: ${DATA.contact.social.GitHub.url}
@@ -119,6 +121,7 @@ ${line("Profile", `${SITE}/portfolio`, "Full profile: experience, projects, stac
 ${line("Blog index", SITE, "Every post, searchable and filterable by tag")}
 ${line("Ideas", "https://buildrhq.com/ideas", "Open-source project ideas people want built, with voting. Hosted on BuildrHQ")}
 ${line("BuildrHQ", "https://buildrhq.com", "The platform the ideas and contributor programme live on")}
+${line("Full site text", `${SITE}/llms-full.txt`, "Every post and the profile inlined in one plain-text document")}
 ${line("RSS feed", `${SITE}/feed.xml`)}
 ${line("Sitemap", `${SITE}/sitemap.xml`)}
 

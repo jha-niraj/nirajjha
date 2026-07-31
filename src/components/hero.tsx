@@ -61,7 +61,7 @@ export function Hero() {
 						    where it is the closing flourish; running it here too would
 						    put the same trick at both ends of every page. */}
 						<BlurFade delay={DELAY * 2} yOffset={8}>
-							<h1 className="text-5xl font-semibold tracking-tighter sm:text-6xl">
+							<h1 className="display-heading display-heading-xl text-5xl sm:text-6xl">
 								{DATA.name}
 							</h1>
 						</BlurFade>

@@ -108,7 +108,7 @@ export default async function HomePage() {
 					</BlurFade>
 
 					<BlurFade delay={0.08}>
-						<h1 className="mt-5 max-w-3xl text-balance text-[2rem] font-semibold leading-[1.15] tracking-tight sm:text-[2.75rem]">
+						<h1 className="display-heading display-heading-xl mt-5 max-w-3xl text-balance text-[2rem] leading-[1.15] sm:text-[2.75rem]">
 							Notes from building AI products that have to keep working
 						</h1>
 					</BlurFade>

@@ -172,7 +172,7 @@ export default async function PostPage({
 					</BlurFade>
 
 					<BlurFade delay={0.12}>
-						<h1 className="mt-3.5 max-w-3xl text-balance text-[1.75rem] font-semibold leading-[1.2] tracking-tight sm:text-[2.125rem]">
+						<h1 className="mt-3.5 max-w-3xl text-balance display-heading text-[1.75rem] leading-[1.2] sm:text-[2.125rem]">
 							{post.metadata.title}
 						</h1>
 					</BlurFade>

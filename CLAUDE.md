@@ -116,6 +116,39 @@ saturation apart from `--destructive`.
 colour**, including in tech-stack icons, charts, or hover states. Hierarchy
 comes from contrast, weight, and spacing.
 
+### Typography
+
+Two faces, and the split is deliberate:
+
+| Variable | Face | Used for |
+| --- | --- | --- |
+| `--font-sans` | Inter | Everything. Body, UI, nav, every `h2`/`h3` inside a post |
+| `--font-display` | Bricolage Grotesque | The single biggest heading on a page, and nothing else |
+| `--font-wordmark` | Instrument Serif | The footer wordmark only |
+
+Apply the display face with the `.display-heading` class from `globals.css`, not
+by reaching for `font-display` inline, so the tracking and optical size travel
+with it. Add `.display-heading-xl` on genuinely large text (the root hero, the
+portfolio name), which pushes the optical-size axis up and tightens tracking
+further.
+
+**Only the page's `h1` gets it.** Not section headers, not headings inside an
+article, not the admin chrome. A display face is a signal, and a signal applied
+to everything is noise. The class carries `font-weight: 600` and its own
+`letter-spacing`, so drop any `font-semibold` / `tracking-tight` next to it
+rather than leaving a utility that silently loses.
+
+All three are **self-hosted** through `next/font/local` from `src/app/fonts/`,
+not `next/font/google`. The Google loader fetches at build time and, when that
+fetch fails, does not fail the build: it warns and ships the fallback, which is
+exactly how Inter shipped as Arial once. `localFont` has the same API and the
+same `--font-*` variable output with no network dependency. To add a face,
+download the `latin` woff2 from the Google CSS and drop it in `src/app/fonts/`.
+
+Bricolage is variable on two axes (`opsz` 12-96, `wght` 200-800), which is why
+`font-variation-settings: "opsz"` appears in the class: a 48px title gets
+letterforms drawn for 48px rather than a 16px master scaled up.
+
 ### Contrast
 
 Body copy uses `text-muted-foreground`, which is deliberately tuned to stay
@@ -297,6 +330,52 @@ Adding a piece: write the SVG component in `post-art.tsx`, register it in the
   block and given a sensible static pose there. An animation that simply
   vanishes under reduced motion is a bug.
 - Stagger with `--i` on the element and `calc(var(--i) * Ns)` in the delay.
+
+### The 404
+
+`src/app/not-found.tsx` and `src/app/(site)/not-found.tsx` both render
+`<NotFoundView>`. Two boundaries are needed and they are not redundant:
+
+- `(site)/not-found.tsx` catches `notFound()` thrown by the post route, which is
+  where nearly every real 404 arrives, because any single-segment URL matches
+  `[slug]` first. It is inside the group, so it gets the header, footer and dock
+  for free.
+- `not-found.tsx` at the root catches anything deeper (`/a/b/c`). A root
+  not-found renders in `app/layout.tsx` only, because route group layouts do not
+  apply to it, so it wraps `<SiteShell>` by hand. Without that, deep 404s render
+  as bare text.
+
+The artwork follows the same rules as the post art: pure SVG plus keyframes in
+globals.css, `currentColor` only, and a static pose under
+`prefers-reduced-motion` (the probe parks at the gap rather than disappearing).
+
+**Keep the `robots` override in the root not-found.** The root layout declares
+`index: true` for real pages and metadata merges down, so removing it ships two
+contradictory robots tags: Next's automatic `noindex` beside the layout's
+`index, follow`. Crawlers take the strictest reading, but do not publish a
+contradiction and lean on the tie-break.
+
+The page lists real recent posts. A 404 that only apologises wastes the one
+moment someone is definitely looking for something.
+
+## Machine-readable text: llms.txt and llms-full.txt
+
+Two files, and the split is the point:
+
+| Route | What it is | For |
+| --- | --- | --- |
+| `/llms.txt` | An index. Every post as one `- [Title](url): summary` line, linked to its `.md` | An agent that wants one post, cheaply |
+| `/llms-full.txt` | The corpus. Every post inlined in full, plus the profile | A crawler that wants the whole site in one request |
+| `/<slug>.md` | One post's markdown source, via the rewrite in `next.config.mjs` | What the index links to |
+
+Publishing only the index forces a whole-site reader into N requests.
+Publishing only the full text makes a one-question reader pay for everything.
+
+`llms-full.txt` inlines the MDX source, not rendered HTML, and **demotes every
+heading in a post by one level** so the document stays a real tree: posts are
+`##`, so a post's own `##` sections become `###`. Without that, nothing marks
+where one post ends. The demotion tracks fenced blocks and skips them, because
+a `# comment` at the start of a shell line is not a heading.
 
 ## Newsletter: how a post becomes an email
 

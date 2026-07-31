@@ -38,6 +38,25 @@ const nextConfig = {
 				destination: "/hello",
 				permanent: true,
 			},
+			// The ideas board and the contributor programme moved to BuildrHQ, which
+			// is where the accounts and the auth live. These paths were public here,
+			// so they redirect rather than 404: a 404 drops whatever ranking and
+			// inbound links they had, a 301 hands both to the new home.
+			{
+				source: "/ideas",
+				destination: "https://buildrhq.com/ideas",
+				permanent: true,
+			},
+			{
+				source: "/ideas/:slug",
+				destination: "https://buildrhq.com/ideas/:slug",
+				permanent: true,
+			},
+			{
+				source: "/contribute",
+				destination: "https://buildrhq.com/contribute",
+				permanent: true,
+			},
 		];
 	},
 
