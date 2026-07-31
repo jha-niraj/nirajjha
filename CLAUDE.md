@@ -18,7 +18,8 @@ looked like a failure. `packageManager` does the real enforcement where it
 counts, which is CI and Vercel.
 
 ```
-pnpm dev          # dev server
+pnpm dev          # dev server, shows only live posts
+pnpm dev:drafts   # dev server, unpublished posts visible too
 pnpm build        # production build
 pnpm lint
 pnpm typecheck
@@ -217,7 +218,7 @@ category: string        # optional, broad grouping. Lowercase slug: "databases"
 kind: string            # optional, shape of the piece: essay | tutorial | note
 tags: [string]          # optional
 featured: boolean       # optional, pins to top of /blogs
-draft: boolean          # optional, hidden in production
+live: boolean           # REQUIRED. false or absent means not published
 image: /path.webp       # optional, overrides the generated social card only
 ```
 
@@ -400,7 +401,7 @@ bridge, and the pipeline has exactly three moving parts.
                           |  pnpm blog:broadcast   <- manual, dry run by default
                           |  SELECT ... WHERE broadcast_sent_at IS NULL
                           |               AND broadcast_skipped = false
-                          |               AND draft = false
+                          |               AND live = true
                           |               AND published_at <= today
                           v
                   resend.broadcasts.create({ segmentId, from, subject, html, send: true })
@@ -419,10 +420,37 @@ bridge, and the pipeline has exactly three moving parts.
 
 ### Publishing a new post
 
+Posts are written ahead and released one at a time. `live` is the switch, and
+`blog.ts` filters on it in every environment. An unpublished post is not built as
+a route, so its URL 404s rather than being merely unlinked, and it stays out of
+the sitemap, the feed, `llms.txt`, `llms-full.txt` and the `.md` sources.
+
+**`pnpm dev` shows exactly what production shows.** It used to key the filter off
+`NODE_ENV === "development"`, so the dev server listed every unpublished post and
+the local site never matched the deployed one. A preview mode that is always on
+is not a preview mode. To proofread before publishing:
+
+```sh
+pnpm dev:drafts   # SHOW_UNPUBLISHED=1, lists and serves unpublished posts too
+```
+
+**Publishing is opt in.** A post with no `live: true` is invisible. This replaced
+a `draft` flag that defaulted to published, where forgetting the flag shipped the
+post; forgetting `live` only hides one, which is the recoverable direction.
+`blog:lint` requires the key, so it cannot be left off by accident.
+
+**A future `publishedAt` does not hide anything.** There is no date filter on the
+site, only on the broadcast query. Date-stamp a post next month with
+`live: true` and it goes live now, just sorted to the top. `live` is the only
+switch.
+
 1. Write `content/my-post.mdx` with `title`, `summary`, `publishedAt`,
-   `category`, `kind`, `tags`, `art`.
-2. `pnpm blog:sync` to insert the row with `broadcast_sent_at` null.
-3. Deploy.
+   `category`, `kind`, `tags`, `art`, and `live: false`.
+2. On the day it goes out: `pnpm blog:publish my-post`. That flips the flag,
+   then runs `blog:lint` and `links:check`, and **puts the flag back if either
+   fails**, so a post cannot go live broken by forgetting to check.
+3. `pnpm blog:sync` to insert the row with `broadcast_sent_at` null.
+4. Deploy.
 4. `pnpm blog:broadcast` to preview: it prints the subject, URL and recipient
    count and sends nothing.
 5. `pnpm blog:broadcast --send` when the preview looks right.

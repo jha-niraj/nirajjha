@@ -8,6 +8,7 @@
     },
     "scripts": {
         "dev": "next dev --port 7000",
+        "dev:drafts": "SHOW_UNPUBLISHED=1 next dev --port 7000",
         "build": "next build",
         "start": "next start",
         "lint": "eslint . --max-warnings 0",
@@ -19,6 +20,7 @@
         "db:migrate": "node scripts/migrate.mjs",
         "resend:setup": "node scripts/resend-setup.mjs",
         "blog:sync": "node scripts/blog-sync.mjs",
+        "blog:publish": "node scripts/blog-publish.mjs",
         "blog:broadcast": "node scripts/blog-broadcast.mjs",
         "blog:preview": "node scripts/blog-broadcast.mjs --preview",
         "links:check": "node scripts/check-links.mjs",

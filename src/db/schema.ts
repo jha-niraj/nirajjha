@@ -174,7 +174,8 @@ export const posts = pgTable(
 		readingTime: integer("reading_time").notNull().default(1),
 		publishedAt: varchar("published_at", { length: 10 }).notNull(),
 		updatedAt: varchar("updated_at", { length: 10 }),
-		draft: boolean("draft").notNull().default(false),
+		/** Opt in to publishing. Absent or false means the post is not public. */
+		live: boolean("live").notNull().default(false),
 		featured: boolean("featured").notNull().default(false),
 
 		/**
@@ -201,7 +202,7 @@ export const posts = pgTable(
 		broadcastSkipped: boolean("broadcast_skipped").notNull().default(false),
 	},
 	(t) => ({
-		// The broadcast query is "not sent, not skipped, not draft, due now",
+		// The broadcast query is "not sent, not skipped, live, due now",
 		// so index the columns it filters on.
 		pending: index("posts_broadcast_pending_idx").on(
 			t.broadcastSentAt,

@@ -1,7 +1,7 @@
 ---
 title: "Three layers people call a server action"
 publishedAt: "2026-08-01"
-summary: "Two mutations in the same codebase, written three different ways, one skipping validation. The confusion is that a server action is three stacked things."
+summary: "A two line pull request nearly went through on my phone. It was the third delete button that month, written the third different way, and one of them was wide open."
 art: "pipeline"
 category: "nextjs"
 kind: "essay"
@@ -10,38 +10,54 @@ terms:
   server-action: "An async function marked 'use server' that runs on the server and can be called from the browser as if it were a local function."
   discriminated-union: "A result type where one field tells you which shape you have. Checking that field narrows the type, so the compiler knows which other fields exist."
   middleware: "Code that runs before the real work, on every call, to do the thing you must never forget: check auth, attach the user, log."
-draft: true
+  idor: "Insecure direct object reference. Passing an id the server trusts, so changing the id in the request gets you somebody else's data."
+live: false
 ---
 
-Three people on the same codebase wrote three delete buttons in a month.
+The pull request was two lines and I nearly approved it from my phone, in a queue, the way nobody should ever approve anything.
 
-One awaited the action directly and wrapped it in `try/catch`. One used a hook. One called the action, ignored the return value entirely, and shipped a mutation with no validation on the input at all.
+Someone had added a delete button. It called the action, ignored what came back, and moved on. No validation on the input. No check that the person clicking owned the thing they were deleting.
 
-None of them were wrong about the code they copied. They were wrong about what they were copying, because "server action" is used for three different things that sit on top of each other.
+It was the third delete button that month, written the third different way. None of the three authors had done anything unreasonable. Each had copied the nearest example, and the examples disagreed with each other, because "server action" gets used for three different things stacked on top of one another.
+
+Until you can name all three, you cannot tell which one an example is showing you.
 
 ## The three layers
 
 Say them out loud once and the rest of this is easy.
 
-**One: the raw action.** An `async` function marked [`'use server'`](https://nextjs.org/docs/app/api-reference/directives/use-server). You call it like a local function and the framework turns that into a network request. It has no validation, and it signals failure by throwing.
+**One: the raw action.** An `async` function marked [`'use server'`](https://nextjs.org/docs/app/api-reference/directives/use-server). You call it like a local function and the framework turns that into a network request. No validation, and it signals failure by throwing.
 
-**Two: the wrapper.** A [safe action](https://next-safe-action.dev/) built on top of the raw one. It attaches an input schema and [middleware](term:middleware), and instead of throwing it returns a result object.
+**Two: the wrapper.** A [safe action](https://next-safe-action.dev/) built on the raw one. It attaches an input schema and [middleware](term:middleware), and instead of throwing it returns a result object.
 
-**Three: the hook.** `useAction`, which does not define anything. It calls a wrapper-built action and gives you React state while the call is in flight.
+**Three: the hook.** `useAction`, which defines nothing. It calls a wrapper-built action and gives you React state while the call is in flight.
 
-The analogy that made it stick for me: layer one is a phone line. Layer two is a receptionist who checks who you are and writes down your message properly. Layer three is the little "connecting..." light on your handset.
+The analogy that made it stick for me: layer one is a phone line. Layer two is a receptionist who checks who is calling and writes the message down properly. Layer three is the little "connecting" light on the handset.
 
-They are not alternatives. Each one sits on the one below it.
+They are not alternatives. Each one sits on the one below.
+
+```mermaid
+flowchart TD
+  A["Client component"] --> B["3. useAction<br/>status, isPending, callbacks"]
+  B --> C["2. Safe action<br/>schema + auth middleware"]
+  C --> D["1. Raw 'use server' function<br/>a public POST endpoint"]
+  D --> E[("Database")]
+  C -.->|"input fails the schema"| F["validationErrors"]
+  C -.->|"body threw"| G["serverError"]
+  D -.->|"anyone can call this directly"| H["No UI involved"]
+```
+
+The dotted line on the right is the one that matters. Layers two and three are yours. Layer one is reachable by anybody.
 
 ## Why the raw layer is not enough
 
 A [server action](term:server-action) looks like a function call, so it inherits the trust you give a function call. It should not.
 
-It is a POST endpoint. Anyone can call it with any payload, from anywhere, with no UI involved. That means two things are always your job: validating the input, and deciding whether this caller is allowed.
+It is a POST endpoint. Anyone can call it with any payload, from anywhere, with no UI involved. So two things are permanently your job: validating the input, and deciding whether this caller is allowed.
 
 The Next.js team [say this directly](https://nextjs.org/blog/security-nextjs-server-components-actions): an action is a public entry point, and the fact that only one component imports it is not a security boundary. Nothing stops a request arriving without that component ever rendering.
 
-The throwing part is the other half of the problem:
+The throwing part is the other half:
 
 ```tsx
 // Raw action. Every failure is an exception, so every caller
@@ -53,7 +69,7 @@ export async function invite(email: string) {
 }
 ```
 
-A typo in an email address is not an exceptional condition. It is the most ordinary thing a form does. Using exceptions for it means the expected path and the broken path are handled by the same machinery, and the compiler cannot tell you which errors are possible.
+A typo in an email address is not an exceptional condition. It is the single most ordinary thing a form produces. Routing it through exceptions means the expected path and the broken path share machinery, and the compiler cannot tell you which failures are possible.
 
 ## What the wrapper actually buys
 
@@ -83,13 +99,13 @@ export const invite = authedAction
   });
 ```
 
-Calling that returns a [discriminated union](term:discriminated-union): `data`, `validationErrors`, or `serverError`. You branch on it. There is no `try/catch`, because a bad email is no longer an exception, it is a value.
+Calling that returns a [discriminated union](term:discriminated-union): `data`, `validationErrors`, or `serverError`. You branch on it. No `try/catch`, because a bad email stopped being an exception and became a value.
 
-The important part is not the ergonomics. It is that a component **cannot accidentally skip the auth check**, because the check lives in the client that built the action, not in the component that calls it.
+The real win is not ergonomics. It is that a component **cannot accidentally skip the auth check**, because the check lives in the client that built the action rather than in the component that calls it. Correctness by construction beats correctness by review, especially at 6pm on a Friday.
 
 ## Where the hook fits
 
-The hook is only about consuming. This is the line that clears up most of the confusion: **`useAction` is not a way to define an action, it is a way to call one.**
+The hook is only about consuming. This is the sentence that clears up most of the confusion: **`useAction` is not a way to define an action, it is a way to call one.**
 
 Called directly, you own the lifecycle:
 
@@ -111,22 +127,22 @@ const { execute, isPending } = useAction(invite, {
 
 The hooks live at `next-safe-action/hooks`, a separate entry point, so server code never pulls React hooks into its bundle. That split is deliberate and worth copying in your own libraries.
 
-Direct calls are fine from a server component or a one-off. Anything with a button and a spinner wants the hook.
+Direct calls are fine from a [server component](https://react.dev/reference/rsc/server-components) or a one-off. Anything with a button and a spinner wants the hook.
 
 ## Where the wrapper stops
 
-This is the part to have ready when an interviewer pushes, because it is where people overclaim.
+Have this ready when an interviewer pushes, because it is where people overclaim.
 
-The wrapper validates **shape**, not **permission**. A schema proves `orderId` is a UUID. It says nothing about whether this user may cancel that order. Ownership checks belong in the action body, against the session in `ctx`, and no schema will ever do them for you.
+The wrapper validates **shape**, not **permission**. A schema proves `orderId` is a UUID. It says nothing about whether this user may cancel that order. Ownership checks belong in the action body, against the session in `ctx`, and no schema will ever do them for you. Skipping that is [insecure direct object reference](term:idor), which has sat in the [OWASP top ten](https://owasp.org/www-project-top-ten/) for two decades under one name or another.
 
-It also does not make the endpoint private. The action is still reachable by anyone who can form a request. The middleware is what protects it, so an action built from an unauthenticated client is public, however deeply nested the component that calls it.
+It also does not make the endpoint private. The action is still reachable by anyone who can form a request, so an action built from an unauthenticated client is public however deeply nested the component that calls it.
 
-I got this wrong on my own site once. An action took a visitor id as an argument, which meant anyone who saw an id could act as that visitor. The fix was to read identity from the cookie on the server and never accept it as input. A schema would have happily validated the attacker's id.
+I got this wrong on this site. An action took a visitor id as an argument, which meant anyone who saw an id could delete that visitor's comments. The fix was to read identity from the cookie on the server and never accept it as input. A schema would have validated the attacker's id perfectly happily.
 
 ## The short version
 
-- A raw action is a POST endpoint with no validation that throws on failure. Treat every argument as hostile.
-- The wrapper adds a schema, [middleware](https://next-safe-action.dev/docs/guides/middleware) and a typed result, so expected failures are values you branch on rather than exceptions you catch.
+- A raw action is a public POST endpoint with no validation that throws on failure. Treat every argument as hostile.
+- The wrapper adds a schema, [middleware](https://next-safe-action.dev/docs/guides/middleware) and a typed result, so expected failures become values you branch on instead of exceptions you catch.
 - Define one auth-wrapped client and route every mutation through it, so a component cannot skip the check.
-- [`useAction`](https://next-safe-action.dev/docs/guides/hooks) consumes an action, it does not define one. Use it wherever there is a button and a spinner.
-- Schemas validate shape, not permission. Ownership checks go in the action body, against the session, every time.
+- [`useAction`](https://next-safe-action.dev/docs/guides/hooks) consumes an action, it does not define one. Reach for it wherever there is a button and a spinner.
+- Schemas validate shape, not permission. Ownership checks go in the action body, against the session, every single time.

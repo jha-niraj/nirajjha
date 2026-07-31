@@ -39,7 +39,8 @@ export type PostMetadata = {
 	kind?: string;
 	tags: string[];
 	/** Drafts are excluded from the index, sitemap, RSS and static params. */
-	draft: boolean;
+	/** Opt in to publishing. Absent means not live. */
+	live: boolean;
 	/** Pinned to the top of the blog index. */
 	featured: boolean;
 };
@@ -97,7 +98,7 @@ function normalize(raw: Record<string, unknown>, slug: string): PostMetadata {
 				: {},
 		kind: raw.kind ? String(raw.kind) : undefined,
 		tags,
-		draft: raw.draft === true,
+		live: raw.live === true,
 		featured: raw.featured === true,
 	};
 }
@@ -191,8 +192,22 @@ export const getPost = cache(async (slug: string): Promise<Post | null> => {
 });
 
 /**
- * Every published post, newest first. Drafts are filtered out in production
- * but kept in dev so you can preview them locally.
+ * Unpublished posts are hidden in dev too, unless you ask for them.
+ *
+ * This used to key off `NODE_ENV === "development"`, so the dev server listed
+ * every unpublished post and the local site never matched the deployed one.
+ * That is exactly backwards: the thing you look at all day should be the thing
+ * your readers get, and a preview mode that is always on is not a preview mode.
+ *
+ * `pnpm dev:drafts` sets this when you actually want to proofread. Note that
+ * `dynamicParams = false` on the post route derives its allowed slugs from this
+ * same list, so an unpublished post 404s rather than rendering unlinked.
+ */
+const SHOW_UNPUBLISHED = process.env.SHOW_UNPUBLISHED === "1";
+
+/**
+ * Every published post, newest first. Unpublished posts are excluded unless
+ * SHOW_UNPUBLISHED is set.
  */
 export const getBlogPosts = cache(async (): Promise<Post[]> => {
 	const files = getMDXFiles(contentDir());
@@ -202,7 +217,10 @@ export const getBlogPosts = cache(async (): Promise<Post[]> => {
 
 	return posts
 		.filter((p): p is Post => p !== null)
-		.filter((p) => !p.metadata.draft || process.env.NODE_ENV === "development")
+		// Publishing is opt in: a post with no `live: true` is invisible.
+		// Forgetting the flag hides a post, which is recoverable; the old `draft`
+		// default published anything you forgot to mark.
+		.filter((p) => p.metadata.live || SHOW_UNPUBLISHED)
 		.sort(
 			(a, b) =>
 				new Date(b.metadata.publishedAt).getTime() -

@@ -71,6 +71,13 @@
       "when": 1785441464466,
       "tag": "0009_cloudy_sabra",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785441464467,
+      "tag": "0010_rename_draft_to_live",
+      "breakpoints": true
     }
   ]
 }

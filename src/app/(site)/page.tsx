@@ -2,9 +2,10 @@ import BlurFade from "@/components/magicui/blur-fade";
 import { BlogExplorer } from "@/components/blog-explorer";
 import { getAllTags, getBlogPosts } from "@/data/blog";
 import { DATA } from "@/data/resume";
-import { getCommentCounts, getViewCounts } from "@/db/queries";
+import { getCommentCounts, getSiteTotals, getViewCounts } from "@/db/queries";
 import type { PostSummary } from "@/lib/post-types";
 import { buildBlogIndexGraph } from "@/lib/schema";
+import { StatIcon, type StatIconName } from "@/components/stat-icons";
 import { SubscribeButton } from "@/components/subscribe-form";
 import { ArrowRight, Rss } from "lucide-react";
 import type { Metadata } from "next";
@@ -47,10 +48,52 @@ export default async function HomePage() {
 	const tags = await getAllTags();
 	const slugs = posts.map((p) => p.slug);
 
-	const [views, commentCounts] = await Promise.all([
+	const [views, commentCounts, totals] = await Promise.all([
 		getViewCounts(slugs),
 		getCommentCounts(slugs),
+		getSiteTotals(slugs),
 	]);
+
+	const totalReads = Object.values(views).reduce((n, v) => n + v, 0);
+
+	/*
+	 * Four counters, always four, so the 2x2 grid is never ragged. Three in a
+	 * two-column grid left an orphan on the second row, which is what made the
+	 * block look broken rather than designed.
+	 *
+	 * Topics is deliberately not here: the tag chips sit a few hundred pixels
+	 * below and already say how many there are, so a "Topics 7" counter is the
+	 * same fact twice.
+	 *
+	 * These are shown at whatever they currently are. I would normally hold
+	 * subscriber counts back until they flatter you, but you asked for the real
+	 * number on screen, so it is the real number.
+	 */
+	const engagementIsLive =
+		totalReads > 0 || totals.likes > 0 || totals.subscribers > 0;
+
+	const visibleStats: {
+		label: string;
+		value: number;
+		icon: StatIconName;
+	}[] = engagementIsLive
+		? [
+				{ label: "Posts", value: posts.length, icon: "posts" },
+				{ label: "Total reads", value: totalReads, icon: "reads" },
+				{ label: "Likes", value: totals.likes, icon: "likes" },
+				{
+					label: "Subscribers",
+					value: totals.subscribers,
+					icon: "subscribers",
+				},
+			]
+		: // Database unreachable or genuinely empty. A row of zeros says nothing
+			// true and looks broken, so fall back to the two facts that come from
+			// the filesystem and are always right.
+			[
+				{ label: "Posts", value: posts.length, icon: "posts" },
+				{ label: "Topics", value: tags.length, icon: "reads" },
+			];
 
 	const summaries: PostSummary[] = posts.map((p) => ({
 		slug: p.slug,
@@ -94,80 +137,89 @@ export default async function HomePage() {
 				{/* Editorial masthead. This is the site's front door now, so it
 				    introduces the writing and the person, rather than acting as a
 				    section header the way it did at /blogs. */}
-				<header className="mb-12 border-b border-border pb-12">
-					<BlurFade delay={0.04}>
-						<div className="flex items-center gap-2.5">
-							<span className="relative flex size-1.5">
-								<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/50" />
-								<span className="relative inline-flex size-1.5 rounded-full bg-foreground" />
-							</span>
-							<p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-								Writing by {DATA.shortName}
+				{/*
+				 * Two columns from `lg` up: the title and standfirst on the left, the
+				 * actions and counts on the right.
+				 *
+				 * Stacked, these five blocks pushed the first post most of a viewport
+				 * down the page, so the index opened on chrome rather than on writing.
+				 * Side by side the header costs roughly the height of the heading
+				 * alone. It collapses back to one column below `lg`, where there is no
+				 * width to spend and the stacked order is the right reading order.
+				 */}
+				<header className="mb-12 grid gap-x-12 gap-y-8 border-b border-border pb-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+					<div>
+						<BlurFade delay={0.04}>
+							<div className="flex items-center gap-2.5">
+								<span className="relative flex size-1.5">
+									<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/50" />
+									<span className="relative inline-flex size-1.5 rounded-full bg-foreground" />
+								</span>
+								<p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+									Writing by {DATA.shortName}
+								</p>
+							</div>
+						</BlurFade>
+
+						<BlurFade delay={0.08}>
+							<h1 className="display-heading display-heading-xl mt-5 max-w-2xl text-balance text-[2rem] leading-[1.15] sm:text-[2.75rem]">
+								Notes from building AI products that have to keep working
+							</h1>
+						</BlurFade>
+
+						<BlurFade delay={0.12}>
+							<p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
+								Architecture decisions and the trade-offs behind them, retrieval
+								that survives production, and the things I got wrong first.
+								Written from systems that shipped, not from tutorials.
 							</p>
-						</div>
-					</BlurFade>
+						</BlurFade>
+					</div>
 
-					<BlurFade delay={0.08}>
-						<h1 className="display-heading display-heading-xl mt-5 max-w-3xl text-balance text-[2rem] leading-[1.15] sm:text-[2.75rem]">
-							Notes from building AI products that have to keep working
-						</h1>
-					</BlurFade>
+					<div className="lg:text-right">
+						<BlurFade delay={0.16}>
+							<div className="flex flex-wrap items-center gap-2 lg:justify-end">
+								<SubscribeButton source="home" />
+								<Link
+									href="/portfolio"
+									className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+								>
+									About me
+									<ArrowRight className="size-3.5" />
+								</Link>
+								<Link
+									href="/feed.xml"
+									prefetch={false}
+									className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+									title="RSS feed (XML, for feed readers)"
+								>
+									<Rss className="size-3.5" />
+									RSS
+								</Link>
+							</div>
+						</BlurFade>
 
-					<BlurFade delay={0.12}>
-						<p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
-							Architecture decisions and the trade-offs behind them, retrieval
-							that survives production, and the things I got wrong first. Written
-							from systems that shipped, not from tutorials.
-						</p>
-					</BlurFade>
-
-					<BlurFade delay={0.16}>
-						<div className="mt-7 flex flex-wrap items-center gap-2">
-							<SubscribeButton source="home" />
-							<Link
-								href="/portfolio"
-								className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-							>
-								About me
-								<ArrowRight className="size-3.5" />
-							</Link>
-							<Link
-								href="/feed.xml"
-								prefetch={false}
-								className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-								title="RSS feed (XML, for feed readers)"
-							>
-								<Rss className="size-3.5" />
-								RSS
-							</Link>
-						</div>
-					</BlurFade>
-
-					{/* Counts, not decoration: they tell a first-time reader how much
-					    is actually here before they scroll. */}
-					<BlurFade delay={0.2}>
-						<dl className="mt-9 flex flex-wrap gap-x-10 gap-y-4">
-							{[
-								{ label: "Posts", value: String(posts.length) },
-								{ label: "Topics", value: String(tags.length) },
-								{
-									label: "Total reads",
-									value: Object.values(views)
-										.reduce((n, v) => n + v, 0)
-										.toLocaleString(),
-								},
-							].map((stat) => (
-								<div key={stat.label}>
-									<dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-										{stat.label}
-									</dt>
-									<dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight">
-										{stat.value}
-									</dd>
-								</div>
-							))}
-						</dl>
-					</BlurFade>
+						{/* Counts, not decoration: they tell a first-time reader how much
+						    is actually here before they scroll. */}
+						<BlurFade delay={0.2}>
+							<dl className="mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4 lg:grid-cols-2">
+								{visibleStats.map((stat) => (
+									<div
+										key={stat.label}
+										className="bg-background px-4 py-3 text-left"
+									>
+										<dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+											<StatIcon name={stat.icon} />
+											{stat.label}
+										</dt>
+										<dd className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight">
+											{stat.value.toLocaleString()}
+										</dd>
+									</div>
+								))}
+							</dl>
+						</BlurFade>
+					</div>
 				</header>
 
 				<BlurFade delay={0.24}>

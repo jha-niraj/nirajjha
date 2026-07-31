@@ -152,7 +152,20 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning className="h-full">
+		/*
+		 * `data-scroll-behavior="smooth"` is not decorative. globals.css sets
+		 * `scroll-behavior: smooth` on <html> so in-page heading links glide,
+		 * and without this attribute Next cannot tell that apart from a route
+		 * change, so it animates the jump to the top of every new page. The
+		 * attribute tells the router to force an instant scroll on navigation
+		 * and leave anchor links smooth.
+		 */
+		<html
+			lang="en"
+			suppressHydrationWarning
+			className="h-full"
+			data-scroll-behavior="smooth"
+		>
 			<body
 				className={cn(
 					"h-full bg-background font-sans antialiased selection:bg-foreground selection:text-background",

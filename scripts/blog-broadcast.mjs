@@ -11,7 +11,7 @@
  * so the destructive path has to be typed out explicitly every time.
  *
  * Selection is pure SQL against the `posts` table that `pnpm blog:sync` fills:
- * not already sent, not skipped, not a draft, and published on or before today.
+ * not already sent, not skipped, live, and published on or before today.
  */
 import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
@@ -259,7 +259,7 @@ const pending = ONLY_SLUG
 			select * from posts
 			where broadcast_sent_at is null
 			  and broadcast_skipped = false
-			  and draft = false
+			  and live = true
 			  and published_at <= to_char(now(), 'YYYY-MM-DD')
 			order by published_at asc`;
 

@@ -1456,3 +1456,130 @@ html[data-theme-transition] .theme-vt-glass {
 		animation: none;
 	}
 }
+
+/* ---------------------------------------------------------------------------
+   Index stat icons
+   Each mark animates the thing its number counts. Slow and staggered on
+   purpose: four icons beating in unison next to a heading would pull the eye
+   away from the writing, which is the opposite of what the row is for.
+   --------------------------------------------------------------------------- */
+
+.stat-icon {
+	width: 1.05rem;
+	height: 1.05rem;
+	flex: none;
+	color: hsl(var(--muted-foreground));
+	overflow: visible;
+}
+
+/* Posts: the top page lifts and settles back onto the stack. */
+.stat-posts-top {
+	animation: stat-posts 6s ease-in-out infinite;
+	transform-origin: 14px 10px;
+}
+
+@keyframes stat-posts {
+	0%,
+	62%,
+	100% {
+		transform: translate(0, 0);
+	}
+	70% {
+		transform: translate(0.6px, -1.4px);
+	}
+	80% {
+		transform: translate(0, 0.3px);
+	}
+}
+
+/* Reads: the pupil glances left, then right, then centres. */
+.stat-pupil {
+	animation: stat-pupil 7s ease-in-out infinite;
+}
+
+@keyframes stat-pupil {
+	0%,
+	20%,
+	100% {
+		transform: translateX(0);
+	}
+	32%,
+	44% {
+		transform: translateX(-2.2px);
+	}
+	56%,
+	68% {
+		transform: translateX(2.2px);
+	}
+	80% {
+		transform: translateX(0);
+	}
+}
+
+/* Likes: lub-dub, then a long rest. A single pulse reads as a loading spinner. */
+.stat-heart {
+	transform-origin: 12px 13px;
+	animation: stat-heart 5s ease-in-out infinite;
+}
+
+@keyframes stat-heart {
+	0%,
+	58%,
+	100% {
+		transform: scale(1);
+	}
+	64% {
+		transform: scale(1.13);
+	}
+	70% {
+		transform: scale(1);
+	}
+	76% {
+		transform: scale(1.08);
+	}
+	82% {
+		transform: scale(1);
+	}
+}
+
+/* Subscribers: a third figure arrives behind the first. */
+.stat-joiner {
+	animation: stat-joiner 6.5s ease-in-out infinite;
+	transform-origin: 17px 14px;
+}
+
+@keyframes stat-joiner {
+	0%,
+	45%,
+	100% {
+		opacity: 0.55;
+		transform: translateX(0) scale(1);
+	}
+	52% {
+		opacity: 0;
+		transform: translateX(3px) scale(0.85);
+	}
+	62% {
+		opacity: 1;
+		transform: translateX(0) scale(1.04);
+	}
+	70% {
+		opacity: 0.85;
+		transform: translateX(0) scale(1);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* Static poses that still read: page on the stack, pupil centred, heart at
+	   rest, third figure present. */
+	.stat-posts-top,
+	.stat-pupil,
+	.stat-heart,
+	.stat-joiner {
+		animation: none;
+	}
+
+	.stat-joiner {
+		opacity: 0.6;
+	}
+}

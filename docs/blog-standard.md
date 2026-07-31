@@ -78,6 +78,7 @@ A recap for people who skimmed. Bullets, no new information.
 | h3 under one h2 | 5 max | A section that needs six subsections is a section too big |
 | Intro before first h2 | 200 words max | The hook, not a preamble |
 | Code blocks | 6 max | A post is prose with code in it, not code with prose in it |
+| Diagrams (```mermaid) | not counted | A figure is not code. Draw the mechanism whenever it helps |
 | Lines per code block | 25 max | Longer belongs in a repo you link to |
 | Paragraph length | 5 sentences max | |
 | Summary (frontmatter) | 80 to 200 characters | Doubles as the meta description |

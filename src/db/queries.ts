@@ -1,7 +1,13 @@
 import "server-only";
 
 import { db } from "@/db";
-import { comments, postReactions, postStats, postViewsDaily } from "@/db/schema";
+import {
+	comments,
+	postReactions,
+	postStats,
+	postViewsDaily,
+	subscribers,
+} from "@/db/schema";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 export type ReactionKind = "like" | "dislike";
@@ -41,6 +47,73 @@ async function safeRead<T>(run: () => Promise<T>, fallback: T): Promise<T> {
 		console.warn("[db] read failed, serving fallback:", error);
 		return fallback;
 	}
+}
+
+export type SiteTotals = {
+	views: number;
+	likes: number;
+	comments: number;
+	subscribers: number;
+};
+
+const EMPTY_TOTALS: SiteTotals = {
+	views: 0,
+	likes: 0,
+	comments: 0,
+	subscribers: 0,
+};
+
+/**
+ * Site-wide engagement, for the counts on the index.
+ *
+ * One round trip rather than four. These are scalar aggregates over small
+ * tables, so the cost is dominated by the connection, not the scan, and the
+ * home page should not pay four wake-ups on a database that scales to zero.
+ *
+ * Scoped to the slugs actually published. `post_stats` gains a row for anything
+ * that was ever opened, including a draft read on a dev server, and a public
+ * "total reads" that quietly counts unpublished posts is just a wrong number.
+ * Subscribers is deliberately not scoped: it counts people, not posts, and only
+ * those still on the list, because the honest figure is who is subscribed now
+ * rather than who ever was.
+ */
+export async function getSiteTotals(
+	publishedSlugs: string[]
+): Promise<SiteTotals> {
+	if (publishedSlugs.length === 0) return EMPTY_TOTALS;
+
+	return safeRead(async () => {
+		// The neon-http driver returns { rows }, not a bare array, so this cannot
+		// be destructured the way a node-postgres result can.
+		const result = await db!.execute<{
+			views: number;
+			likes: number;
+			comments: number;
+			subscribers: number;
+		}>(sql`
+			select
+				(select coalesce(sum(${postStats.views}), 0)::int from ${postStats}
+					where ${postStats.slug} in ${publishedSlugs})                as views,
+				(select count(*)::int from ${postReactions}
+					where ${postReactions.reaction} = 'like'
+					  and ${postReactions.slug} in ${publishedSlugs})            as likes,
+				(select count(*)::int from ${comments}
+					where ${comments.isDeleted} = false
+					  and ${comments.subjectType} = 'post'
+					  and ${comments.slug} in ${publishedSlugs})                 as comments,
+				(select count(*)::int from ${subscribers}
+					where ${subscribers.unsubscribed} = false)                   as subscribers
+		`);
+
+		const row = result.rows[0];
+
+		return {
+			views: Number(row?.views ?? 0),
+			likes: Number(row?.likes ?? 0),
+			comments: Number(row?.comments ?? 0),
+			subscribers: Number(row?.subscribers ?? 0),
+		};
+	}, EMPTY_TOTALS);
 }
 
 /* -------------------------------------------------------------------------- */

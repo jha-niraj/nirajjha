@@ -60,7 +60,7 @@ for (const file of files) {
 	await sql`
 		insert into posts (
 			slug, title, summary, category, kind, tags, art, reading_time,
-			published_at, updated_at, draft, featured, content_hash,
+			published_at, updated_at, live, featured, content_hash,
 			broadcast_skipped
 		) values (
 			${slug},
@@ -73,7 +73,7 @@ for (const file of files) {
 			${minutes},
 			${String(data.publishedAt ?? "1970-01-01")},
 			${data.updatedAt ? String(data.updatedAt) : null},
-			${data.draft === true},
+			${data.live === true},
 			${data.featured === true},
 			${hash},
 			false
@@ -88,7 +88,7 @@ for (const file of files) {
 			reading_time     = excluded.reading_time,
 			published_at     = excluded.published_at,
 			updated_at       = excluded.updated_at,
-			draft            = excluded.draft,
+			live             = excluded.live,
 			featured         = excluded.featured,
 			content_hash     = excluded.content_hash`;
 
@@ -120,7 +120,7 @@ const [{ pending }] = await sql`
 	select count(*)::int as pending from posts
 	where broadcast_sent_at is null
 	  and broadcast_skipped = false
-	  and draft = false`;
+	  and live = true`;
 
 console.log(
 	`\n${created} new, ${updated} changed, ${unchanged} unchanged. ${pending} awaiting broadcast.`

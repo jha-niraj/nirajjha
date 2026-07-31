@@ -3,7 +3,7 @@
 import { DiagramFigure } from "@/components/diagram-figure";
 import { createRoot, type Root } from "react-dom/client";
 import { useTheme } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Upgrades the embeds that `rehype-embeds` planted in the article HTML.
@@ -62,10 +62,20 @@ function wireYouTube(root: ParentNode): () => void {
 	return () => cleanups.forEach((fn) => fn());
 }
 
+/**
+ * Monotonic, so two renders can never ask mermaid for the same element id.
+ *
+ * mermaid writes the id into the SVG and references it from `url(#id)` fills.
+ * Two diagrams sharing an id means the second one's references resolve against
+ * the first, which renders as a blank box.
+ */
+let diagramSeq = 0;
+
 async function renderMermaid(
 	root: ParentNode,
 	isDark: boolean,
-	roots: Root[]
+	roots: Map<Element, Root>,
+	isStale: () => boolean
 ) {
 	const hosts = Array.from(
 		root.querySelectorAll<HTMLElement>('[data-embed="mermaid"]')
@@ -73,6 +83,9 @@ async function renderMermaid(
 	if (hosts.length === 0) return;
 
 	const { default: mermaid } = await import("mermaid");
+	// The import is slow enough that a theme flip or a navigation can land
+	// mid-flight. Anything after an await has to re-check.
+	if (isStale()) return;
 
 	const foreground = cssVar("--foreground", isDark ? "#f5f5f5" : "#0f0f0f");
 	const background = cssVar("--background", isDark ? "#0a0a0a" : "#ffffff");
@@ -126,7 +139,7 @@ async function renderMermaid(
 		},
 	});
 
-	for (const [i, host] of hosts.entries()) {
+	for (const host of hosts) {
 		const source = host.querySelector(".mermaid-source")?.textContent?.trim();
 		if (!source) continue;
 
@@ -136,18 +149,32 @@ async function renderMermaid(
 
 		try {
 			const { svg } = await mermaid.render(
-				`mermaid-${i}-${isDark ? "d" : "l"}`,
+				`mermaid-${diagramSeq++}`,
 				host.dataset.source
 			);
+			if (isStale()) return;
+
 			// Handed to a React root rather than injected as innerHTML: the
 			// viewport, its controls and the full-screen overlay are a component,
 			// and mounting them this way is the only way to reach React from
 			// inside an article that was itself injected as a string.
-			host.replaceChildren();
+			//
+			// One root per host, kept in the map and reused. Calling createRoot on
+			// a container that already has one is a React error, and it happened
+			// on every theme flip and on every Fast Refresh: the old code made a
+			// second root for the same element and orphaned the first.
+			const existing = roots.get(host);
+			if (existing) {
+				existing.render(<DiagramFigure svg={svg} />);
+			} else {
+				// Only safe before the first root exists. Afterwards the children
+				// belong to React, and clearing them behind its back desyncs it.
+				host.replaceChildren();
+				const created = createRoot(host);
+				roots.set(host, created);
+				created.render(<DiagramFigure svg={svg} />);
+			}
 			host.dataset.state = "ready";
-			const root = createRoot(host);
-			root.render(<DiagramFigure svg={svg} />);
-			roots.push(root);
 		} catch (error) {
 			// A malformed diagram must not take the article down with it. Leave
 			// the source visible, which is the most useful thing to show anyone
@@ -161,25 +188,55 @@ async function renderMermaid(
 export function PostEmbeds() {
 	const { resolvedTheme } = useTheme();
 
+	/**
+	 * One React root per diagram host, surviving theme changes.
+	 *
+	 * This is a ref and not effect-local state because the two effects below
+	 * have deliberately different lifetimes: roots are created and updated on
+	 * every theme change, but torn down only when the component goes away.
+	 */
+	const rootsRef = useRef<Map<Element, Root>>(new Map());
+
+	// Mount lifetime only. Tearing the roots down on every theme change was the
+	// bug: unmount is async, so the next render reached the host before the old
+	// root had let go of it.
 	useEffect(() => {
 		const article = document.querySelector("article");
 		if (!article) return;
 
 		const unwire = wireYouTube(article);
-		// One React root per diagram, unmounted alongside the diagram it renders.
-		// Collected rather than queried back out of the DOM because the next
-		// theme render replaces each host's contents entirely.
-		const roots: Root[] = [];
-
-		// Diagrams are redrawn on theme change: the SVG bakes in its colours, so
-		// a light-mode diagram left alone would stay light on a dark page.
-		void renderMermaid(article, resolvedTheme === "dark", roots);
+		const roots = rootsRef.current;
 
 		return () => {
 			unwire();
 			// Deferred: React refuses to unmount a root synchronously from inside
 			// the render cycle that owns it, and logs a warning if you try.
-			queueMicrotask(() => roots.forEach((r) => r.unmount()));
+			queueMicrotask(() => {
+				roots.forEach((root) => root.unmount());
+				roots.clear();
+			});
+		};
+	}, []);
+
+	// Diagrams are redrawn on theme change: the SVG bakes in its colours, so a
+	// light-mode diagram left alone would stay light on a dark page.
+	useEffect(() => {
+		const article = document.querySelector("article");
+		if (!article) return;
+
+		let stale = false;
+		void renderMermaid(
+			article,
+			resolvedTheme === "dark",
+			rootsRef.current,
+			() => stale
+		);
+
+		// Marks the in-flight render stale rather than cancelling it, since the
+		// dynamic import and mermaid.render cannot be aborted. It just stops the
+		// result being applied after something newer has started.
+		return () => {
+			stale = true;
 		};
 	}, [resolvedTheme]);
 
