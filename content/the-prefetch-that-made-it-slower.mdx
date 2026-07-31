@@ -1,0 +1,121 @@
+---
+title: "The prefetch that made the list page slower"
+publishedAt: "2026-07-31"
+summary: "Turning list rows into Links made navigation instant and the list itself slow. The fix that seemed obvious made it four times worse."
+art: "pipeline"
+category: "nextjs"
+kind: "essay"
+tags: ["Next.js", "Performance", "Interviews"]
+terms:
+  rsc-payload: "The compact description of a rendered React tree that a Next.js server sends back, instead of finished HTML. The browser turns it into UI without a full page load."
+  dynamic-route: "A route whose output depends on the request: the URL parameters, the cookies, or a database read. It cannot be built once at deploy time and reused."
+  loading-boundary: "The Suspense wrapper that a loading.tsx file puts around a route segment. It marks where the server may stop rendering and stream the rest later."
+  cold-start: "The delay when a serverless function has scaled down to nothing and has to boot before it can answer the first request."
+featured: true
+draft: false
+---
+
+The rows in our orders table were `div`s with an `onClick`. Somebody pointed out that you could not tab to them, so I swapped them for links. Correct fix, thirty seconds of work.
+
+Navigation got noticeably faster. The list page got slower. Scrolling it went from smooth to a stutter, and the server's request count for that route roughly tripled.
+
+Both things were caused by the same change, and the fix I reached for next made it four times worse.
+
+## What a prefetch actually is
+
+When a [`<Link>`](https://nextjs.org/docs/app/api-reference/components/link) scrolls into view, Next quietly asks the server for the page behind it before you click. If you do click, the answer is already sitting in memory and the transition is instant.
+
+What comes back is not HTML. It is an [RSC payload](term:rsc-payload): a compact description of the rendered tree that the browser turns into UI without a full page load.
+
+Here is the part that decides everything else. Picture a restaurant. Laying a table is cheap and fast: cutlery, glasses, a menu. Cooking the meal is the expensive part.
+
+A prefetch, by default, **lays the table**. It does not cook.
+
+That is the whole idea. Everything below follows from it.
+
+## The setting that is not what you think
+
+`prefetch` has three settings, and the default is not `true`. This is the single most misread prop in the App Router.
+
+| Setting | What it fetches for a [dynamic route](term:dynamic-route) |
+| --- | --- |
+| omitted (the default) | Only down to the [loading boundary](term:loading-boundary). The skeleton. Not the data. |
+| `prefetch` or `prefetch={true}` | The whole route, data included. |
+| `prefetch={false}` | Nothing on scroll. |
+
+Writing bare `prefetch` means `prefetch={true}`. It looks like you are enabling a feature that was off. You are replacing a cheap default with an expensive one.
+
+The default stops at the boundary for a reason that is worth stating plainly, because it is usually described as if the client were being clever:
+
+```tsx
+// The server renders the layout and the skeleton, then stops.
+// The page body below this point never runs during a prefetch.
+export default function Loading() {
+  return <OrderSkeleton />;
+}
+```
+
+The layout and skeleton are static, so they are safe to build and cache. The page body reads params, cookies and the database, so the server **refuses to run it** for a page you have not opened. Nothing is guessing. The server is declining to do work on spec.
+
+That boundary is a [`<Suspense>`](https://react.dev/reference/react/Suspense) wrapper, which is also why the skeleton can appear before the data exists.
+
+## Why turning it on made things worse
+
+My list showed about twenty rows in the viewport at a time. When I added `prefetch`, every one of those rows fired a full detail render in the background, each with its own database query.
+
+Twenty rows on screen meant twenty full page renders. Scrolling produced more. The detail pages got faster, and the list page, which was now competing with twenty background renders for the same connections, got slower.
+
+That is the trap. The prop reads like "make it fast", and on a list it makes the page you are looking at slow in order to speed up a page you might never open.
+
+The cost is not fixed either. It scales with your data:
+
+```tsx
+// Twelve orders today. A hundred and twenty next quarter.
+// With `prefetch`, every visible row is a query.
+{orders.map((o) => (
+  <Link key={o.id} href={`/orders/${o.id}`} prefetch>
+    {o.reference}
+  </Link>
+))}
+```
+
+## Bounded or unbounded
+
+Here is the test I now use, and it has not been wrong yet.
+
+**Could this set of links ever hold a hundred more, suddenly?**
+
+If yes, it is unbounded. Anything driven by rows in a database is unbounded: orders, users, invoices, search results. Twelve today, a hundred and twenty after a good quarter. Keep the default. The skeleton prefetch stays cheap no matter how the data grows, and a skeleton plus a fast query already feels instant.
+
+If no, it is bounded. A dashboard's tiles, a settings menu, the top-level nav. A fixed set that you control, that will not suddenly become a hundred. Each one is a distinct destination somebody actually intends to visit. Warming the full route costs a handful of requests and makes the click genuinely instant:
+
+```tsx
+// Fixed set of six. Safe to warm fully.
+<Link href="/settings/billing" prefetch>Billing</Link>
+```
+
+The rule in one line: **bounded sets may cook, unbounded sets only lay the table.**
+
+## The part prefetch cannot fix
+
+After I reverted to the default, the list was smooth again and the detail page still took two seconds. The skeleton appeared instantly, then sat there.
+
+This is the beat that gets skipped, so it is worth being blunt about. A skeleton hides latency. It does not remove it. If a two kilobyte response takes two seconds, the payload is not the problem and neither is the client cache. Something on the server is slow.
+
+The usual suspects, in the order I check them:
+
+- A [cold start](term:cold-start). The function scaled to zero and has to boot before it can answer.
+- A sleeping database. Serverless Postgres like [Neon](https://neon.com/docs/introduction/scale-to-zero) scales to zero when idle and pays a wake cost on the first query.
+- Queueing. Many prefetches and navigations at once contend for a small number of instances and connections.
+
+The way to tell in one minute: run the same page against a warm local server. If it is fast locally and slow deployed, the remaining time is infrastructure, not your components. The levers are warm instances, connection pooling and turning off scale-to-zero. No amount of `<Link>` tuning touches any of them.
+
+I spent a day on the front end before I checked this. The database was asleep.
+
+## The short version
+
+- Only [`<Link>`](https://nextjs.org/docs/app/api-reference/components/link) prefetches. A [`router.push`](https://nextjs.org/docs/app/api-reference/functions/use-router) in an `onClick` fetches nothing ahead of time, so the click waits for the whole route cold.
+- The default prefetch fetches the *shape* of the page, down to the [`loading.tsx`](https://nextjs.org/docs/app/api-reference/file-conventions/loading) boundary. Bare `prefetch` fetches the *page*, data and all.
+- Ask whether the set could hold a hundred more, suddenly. Database-driven lists always could: keep the default. Fixed menus cannot: `prefetch` is fine there.
+- Add a page-shaped `loading.tsx` to any dynamic route. That is what makes the default prefetch worth having.
+- If a tiny response is still slow behind the skeleton, stop editing components. Compare against a warm local run, then go and look at cold starts, database wake time and pooling.

@@ -37,14 +37,33 @@ export const TAGS: TagDef[] = [
 	},
 	{
 		label: "Next.js",
-		aliases: ["next.js", "nextjs", "next", "next js", "react"],
+		aliases: [
+			"next.js",
+			"nextjs",
+			"next",
+			"next js",
+			"react",
+			// The App Router series writes about these by name. Folding them in
+			// keeps one chip instead of six that each hold two posts.
+			"app router",
+			"app-router",
+			"rsc",
+			"server components",
+			"server actions",
+			"caching",
+			"streaming",
+		],
+	},
+	{
+		label: "Performance",
+		aliases: ["performance", "perf", "latency", "speed", "prefetch"],
 	},
 	{
 		label: "Interviews",
 		aliases: ["interviews", "interview", "system design"],
 	},
-	{ label: "Git", aliases: ["git", "version control"] },
-	{ label: "GitHub", aliases: ["github", "gh"] },
+	{ label: "Git", aliases: ["git", "version control", "rebase", "merge"] },
+	{ label: "GitHub", aliases: ["github", "gh", "pull requests", "actions"] },
 	{ label: "Introduction", aliases: ["introduction", "intro", "about"] },
 ];
 

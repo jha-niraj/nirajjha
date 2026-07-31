@@ -1,0 +1,111 @@
+---
+title: "The pending flag that lags one frame behind the click"
+publishedAt: "2026-08-02"
+summary: "A button felt dead for a moment after every click, so we added a useState to fake instant feedback. We were hand-rolling a flag React already gives you."
+art: "terminal"
+category: "nextjs"
+kind: "essay"
+tags: ["Next.js", "Performance", "Interviews"]
+terms:
+  transition: "A React update marked as non-urgent. React is allowed to keep the old screen interactive and apply the change when it can, instead of blocking on it."
+  render-priority: "React's ordering of pending work. Urgent updates, like showing a spinner, are allowed to jump ahead of expensive ones."
+  tearing: "When two parts of the screen show state from different moments, because one updated and the other has not yet."
+draft: true
+---
+
+The complaint was small and completely fair. You click Delete, and for a moment nothing happens. Not long, maybe a frame or two, but long enough that people clicked twice.
+
+The fix looked obvious. Add a boolean, set it true synchronously on click, reset it when the call settles.
+
+It worked. It also duplicated a flag that was already sitting in the hook's return value, and I did not understand why the built-in one had looked slow until I read the source.
+
+## The state nobody needed
+
+Here is the shape almost everyone writes first:
+
+```tsx
+const [pending, setPending] = useState(false);
+const { execute, status } = useAction(deleteThing, {
+  onSettled: () => setPending(false),
+});
+const loading = pending || status === 'executing';
+// onClick: () => { setPending(true); execute(id); }
+```
+
+Three pieces of state describing one thing. A manual flag, a status string, and a derived boolean to reconcile them. The `onSettled` exists only to reset the flag, and if it ever fails to fire the button stays disabled forever.
+
+The reason people write it is real, though. Driving the button off `status === 'executing'` alone genuinely does feel late.
+
+## Why the obvious flag feels late
+
+To explain this I have to introduce one idea: the [transition](term:transition).
+
+React splits updates into urgent and non-urgent. Typing in an input is urgent, because a character that appears 100ms late feels broken. Re-rendering a heavy list because of that character is not urgent. React is allowed to keep the old list on screen while it works.
+
+The ordinary analogy: a kitchen with one chef. Somebody asks for a glass of water, somebody else orders a three course meal. The water goes first, not because it arrived first, but because making it wait would be absurd.
+
+[`useTransition`](https://react.dev/reference/react/useTransition) is how you say "this is the three course meal". Your mutation runs inside one, which is what keeps the page responsive while it is in flight.
+
+This matters more than it sounds. Without the transition, a mutation that triggers an expensive re-render blocks the main thread, so the button cannot even repaint as disabled until the work finishes. The transition is what buys you the chance to show anything at all.
+
+Now the part that explains the lag. `status` is set **inside** the transition callback, so it is part of the non-urgent work. React can legitimately defer it. The spinner is stuck behind the meal.
+
+## The flag React already gives you
+
+React also hands back a separate boolean that flips **synchronously**, the instant you call `startTransition`:
+
+```tsx
+const [isTransitioning, startTransition] = useTransition();
+// isTransitioning is true immediately, before any re-render is scheduled
+```
+
+That flag exists precisely so you can show a spinner without waiting. It is high [priority](term:render-priority) by design.
+
+`next-safe-action` combines the two:
+
+```js
+isExecuting: status === 'executing',
+isPending:   status === 'executing' || isTransitioning,
+```
+
+So `isPending` is true the moment you click, and stays true until the action settles. Which is exactly what the manual `useState` was faking, less reliably:
+
+```tsx
+const { execute, isPending } = useAction(deleteThing, {
+  onSuccess: () => toast.success('Deleted'),
+});
+// onClick: () => execute(id)   disabled={isPending}
+```
+
+No `useState`, no `onSettled`, no derived boolean, and no way to get stuck disabled because a callback did not run.
+
+The stuck-disabled case is worth dwelling on, because it is the actual bug the manual version ships with. Reset lives in a callback. Anything that stops the callback firing, an unmount mid-flight, an early return, a throw in another handler, leaves a button that can never be clicked again. The library flag is derived from state React owns, so there is nothing to forget to reset.
+
+## Why the two flags exist at all
+
+If `isPending` is better, why ship `isExecuting` too? Because they answer different questions, and mixing them up produces a different bug.
+
+`isPending` means "something is happening, do not let them click again". That is a button question.
+
+`isExecuting` means "the server call is genuinely in flight". That is a data question. Use it when you are showing progress about the request itself, or deciding whether a subscription is live. If you drive a progress indicator off `isPending`, it lights up during the transition even when no request has started, which is honest for a button and a lie for a progress bar.
+
+The rule I use: **buttons take `isPending`, anything describing the request takes `isExecuting`.**
+
+## Where this stops being enough
+
+Two boundaries, and the second is the one interviewers reach for.
+
+`isPending` is about the transition, not the outcome. It goes false when the action settles, which includes settling with a `serverError`. A button that only watches `isPending` will re-enable itself after a failure and show no sign anything went wrong. You still need the error branch.
+
+The second is [revalidation](https://nextjs.org/docs/app/api-reference/functions/revalidatePath). If your action calls `revalidatePath`, the mutation finishing and the screen updating are two different moments. `isPending` covers the first. The refreshed data arrives after, and between them the row you just deleted is still on screen. That gap is where people reach for [`useOptimisticAction`](https://next-safe-action.dev/docs/guides/hooks) or [`useOptimistic`](https://react.dev/reference/react/useOptimistic), which show the expected result immediately and roll it back if the server disagrees.
+
+Knowing that "pending" and "consistent" are different states is most of what separates a UI that feels fast from one that just has a spinner.
+
+## The short version
+
+- Never add a manual pending `useState`. You are re-implementing [`startTransition`](https://react.dev/reference/react/startTransition)'s flag, worse, and you own the reset bug.
+- `status === 'executing'` is set inside the transition, so React may defer it and the button looks frozen.
+- `isTransitioning` flips synchronously on call, by design, so you can paint a spinner at once.
+- `isPending` is the union of the two. Drive button and disabled state off it.
+- Use `isExecuting` when you mean the request specifically, not the interaction.
+- `isPending` going false means the action settled, not that it succeeded and not that the screen has caught up. Handle errors, and reach for optimistic state when the revalidation gap shows.

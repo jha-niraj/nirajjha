@@ -1,0 +1,132 @@
+---
+title: "Three layers people call a server action"
+publishedAt: "2026-08-01"
+summary: "Two mutations in the same codebase, written three different ways, one skipping validation. The confusion is that a server action is three stacked things."
+art: "pipeline"
+category: "nextjs"
+kind: "essay"
+tags: ["Next.js", "Interviews"]
+terms:
+  server-action: "An async function marked 'use server' that runs on the server and can be called from the browser as if it were a local function."
+  discriminated-union: "A result type where one field tells you which shape you have. Checking that field narrows the type, so the compiler knows which other fields exist."
+  middleware: "Code that runs before the real work, on every call, to do the thing you must never forget: check auth, attach the user, log."
+draft: true
+---
+
+Three people on the same codebase wrote three delete buttons in a month.
+
+One awaited the action directly and wrapped it in `try/catch`. One used a hook. One called the action, ignored the return value entirely, and shipped a mutation with no validation on the input at all.
+
+None of them were wrong about the code they copied. They were wrong about what they were copying, because "server action" is used for three different things that sit on top of each other.
+
+## The three layers
+
+Say them out loud once and the rest of this is easy.
+
+**One: the raw action.** An `async` function marked [`'use server'`](https://nextjs.org/docs/app/api-reference/directives/use-server). You call it like a local function and the framework turns that into a network request. It has no validation, and it signals failure by throwing.
+
+**Two: the wrapper.** A [safe action](https://next-safe-action.dev/) built on top of the raw one. It attaches an input schema and [middleware](term:middleware), and instead of throwing it returns a result object.
+
+**Three: the hook.** `useAction`, which does not define anything. It calls a wrapper-built action and gives you React state while the call is in flight.
+
+The analogy that made it stick for me: layer one is a phone line. Layer two is a receptionist who checks who you are and writes down your message properly. Layer three is the little "connecting..." light on your handset.
+
+They are not alternatives. Each one sits on the one below it.
+
+## Why the raw layer is not enough
+
+A [server action](term:server-action) looks like a function call, so it inherits the trust you give a function call. It should not.
+
+It is a POST endpoint. Anyone can call it with any payload, from anywhere, with no UI involved. That means two things are always your job: validating the input, and deciding whether this caller is allowed.
+
+The Next.js team [say this directly](https://nextjs.org/blog/security-nextjs-server-components-actions): an action is a public entry point, and the fact that only one component imports it is not a security boundary. Nothing stops a request arriving without that component ever rendering.
+
+The throwing part is the other half of the problem:
+
+```tsx
+// Raw action. Every failure is an exception, so every caller
+// needs a try/catch or the page breaks on a bad email address.
+'use server';
+export async function invite(email: string) {
+  if (!email.includes('@')) throw new Error('Bad email');
+  await db.insert(invites).values({ email });
+}
+```
+
+A typo in an email address is not an exceptional condition. It is the most ordinary thing a form does. Using exceptions for it means the expected path and the broken path are handled by the same machinery, and the compiler cannot tell you which errors are possible.
+
+## What the wrapper actually buys
+
+You define one client, once, and every mutation goes through it. The schema can come from [Zod](https://zod.dev/) or anything else the library adapts, and it runs on the server before your code sees the input:
+
+```ts
+// One place that knows how auth works.
+export const authedAction = createSafeActionClient()
+  .use(async ({ next }) => {
+    const user = await getSession();
+    if (!user) throw new Error('Not signed in');
+    return next({ ctx: { user } });
+  });
+```
+
+Then a mutation is a schema plus a body, and it cannot skip either:
+
+```ts
+export const invite = authedAction
+  .inputSchema(z.object({ email: z.string().email() }))
+  .action(async ({ parsedInput, ctx }) => {
+    await db.insert(invites).values({
+      email: parsedInput.email,
+      invitedBy: ctx.user.id,
+    });
+    return { ok: true };
+  });
+```
+
+Calling that returns a [discriminated union](term:discriminated-union): `data`, `validationErrors`, or `serverError`. You branch on it. There is no `try/catch`, because a bad email is no longer an exception, it is a value.
+
+The important part is not the ergonomics. It is that a component **cannot accidentally skip the auth check**, because the check lives in the client that built the action, not in the component that calls it.
+
+## Where the hook fits
+
+The hook is only about consuming. This is the line that clears up most of the confusion: **`useAction` is not a way to define an action, it is a way to call one.**
+
+Called directly, you own the lifecycle:
+
+```tsx
+const res = await invite({ email });
+if (res.data) toast.success('Invited');
+else if (res.serverError) toast.error(res.serverError);
+// and you track loading, and reset it, and handle unmount
+```
+
+Called through the hook, the lifecycle is state:
+
+```tsx
+const { execute, isPending } = useAction(invite, {
+  onSuccess: () => toast.success('Invited'),
+  onError: ({ error }) => toast.error(error.serverError ?? 'Failed'),
+});
+```
+
+The hooks live at `next-safe-action/hooks`, a separate entry point, so server code never pulls React hooks into its bundle. That split is deliberate and worth copying in your own libraries.
+
+Direct calls are fine from a server component or a one-off. Anything with a button and a spinner wants the hook.
+
+## Where the wrapper stops
+
+This is the part to have ready when an interviewer pushes, because it is where people overclaim.
+
+The wrapper validates **shape**, not **permission**. A schema proves `orderId` is a UUID. It says nothing about whether this user may cancel that order. Ownership checks belong in the action body, against the session in `ctx`, and no schema will ever do them for you.
+
+It also does not make the endpoint private. The action is still reachable by anyone who can form a request. The middleware is what protects it, so an action built from an unauthenticated client is public, however deeply nested the component that calls it.
+
+I got this wrong on my own site once. An action took a visitor id as an argument, which meant anyone who saw an id could act as that visitor. The fix was to read identity from the cookie on the server and never accept it as input. A schema would have happily validated the attacker's id.
+
+## The short version
+
+- A raw action is a POST endpoint with no validation that throws on failure. Treat every argument as hostile.
+- The wrapper adds a schema, [middleware](https://next-safe-action.dev/docs/guides/middleware) and a typed result, so expected failures are values you branch on rather than exceptions you catch.
+- Define one auth-wrapped client and route every mutation through it, so a component cannot skip the check.
+- [`useAction`](https://next-safe-action.dev/docs/guides/hooks) consumes an action, it does not define one. Use it wherever there is a button and a spinner.
+- Schemas validate shape, not permission. Ownership checks go in the action body, against the session, every time.

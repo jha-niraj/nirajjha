@@ -17,6 +17,11 @@ const LABELS: Record<string, string> = {
 	ai: "AI",
 	frontend: "Frontend",
 	infrastructure: "Infrastructure",
+	// Registered ahead of the series so the first post lands as "Next.js" rather
+	// than the fallback's "Nextjs".
+	nextjs: "Next.js",
+	git: "Git",
+	performance: "Performance",
 };
 
 /** Frontmatter slug -> how the category is written on screen. */
