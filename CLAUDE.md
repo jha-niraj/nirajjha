@@ -247,6 +247,27 @@ post slug collides with it. Old paths (`/blog`, `/notes`, `/blog/<slug>`) are
 permanently redirected in `next.config.mjs`; add a redirect rather than
 breaking a URL that is already public.
 
+### Author notes in a post
+
+`{/* ... */}` is stripped by `stripAuthorComments` in `src/lib/author-comments.ts`
+before anything reads the body, so it never reaches the page, `/<slug>.md` or
+`llms-full.txt`.
+
+**That stripping is the only reason the syntax works.** Posts are named `.mdx`
+but nothing compiles MDX: the pipeline is plain markdown (remark-parse,
+remark-gfm, remark-rehype). MDX would treat `{/* ... */}` as a JSX expression
+and drop it. remark sees ordinary characters and renders them as prose, which is
+exactly what happened: a note parking two projects was published in full, on the
+page and in both machine-readable sources.
+
+`getPost` strips once, at read time, so the HTML, the reading time and the
+contents rail all derive from the same text. Stripping only in the renderer left
+a parked section inflating the reading estimate.
+
+`scripts/blog-lint.mjs` does the same in `proseOnly()`, which is why the word
+counts always looked right while the text was going out. A linter agreeing with
+you is not the same as the site agreeing with you.
+
 ### Every post follows docs/blog-standard.md
 
 **Read [docs/blog-standard.md](docs/blog-standard.md) before writing or editing

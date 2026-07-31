@@ -1,4 +1,5 @@
 import { getBlogPosts } from "@/data/blog";
+import { stripAuthorComments } from "@/lib/author-comments";
 import { postFilePath } from "@/lib/content-path";
 import { SITE_URL } from "@/lib/site";
 import fs from "node:fs";
@@ -40,7 +41,9 @@ export async function GET(
 	const raw = fs.readFileSync(file, "utf-8");
 	// Drop the frontmatter block and restate the useful parts as prose, so a
 	// reader of the plain file gets the metadata without YAML noise.
-	const body = raw.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
+	const body = stripAuthorComments(
+		raw.replace(/^---\n[\s\S]*?\n---\n/, "")
+	).trim();
 
 	const { title, summary, publishedAt, category, tags } = post.metadata;
 

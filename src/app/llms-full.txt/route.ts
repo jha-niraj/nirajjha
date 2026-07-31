@@ -1,6 +1,7 @@
 import { getBlogPosts } from "@/data/blog";
 import { DATA, VISIBLE_PROJECTS } from "@/data/resume";
 import { categoryLabel } from "@/lib/categories";
+import { stripAuthorComments } from "@/lib/author-comments";
 import { postFilePath } from "@/lib/content-path";
 import { SITE_URL as SITE } from "@/lib/site";
 import fs from "node:fs";
@@ -63,7 +64,9 @@ export async function GET() {
 		const raw = fs.readFileSync(postFilePath(slug), "utf-8");
 		// Frontmatter is restated as prose in the per-post header below, so the
 		// YAML block itself is noise here.
-		const body = raw.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
+		const body = stripAuthorComments(
+			raw.replace(/^---\n[\s\S]*?\n---\n/, "")
+		).trim();
 		return demoteHeadings(body);
 	};
 

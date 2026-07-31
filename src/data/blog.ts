@@ -2,6 +2,7 @@ import "server-only";
 
 import { CONTENT_ROOT } from "@/lib/content-path";
 import { categorySlug } from "@/lib/categories";
+import { stripAuthorComments } from "@/lib/author-comments";
 import { canonicalTag, sortTags } from "@/lib/tags";
 import fs from "fs";
 import GithubSlugger from "github-slugger";
@@ -38,7 +39,6 @@ export type PostMetadata = {
 	/** Shape of the piece: essay, tutorial, note. Mirrored into the posts table. */
 	kind?: string;
 	tags: string[];
-	/** Drafts are excluded from the index, sitemap, RSS and static params. */
 	/** Opt in to publishing. Absent means not live. */
 	live: boolean;
 	/** Pinned to the top of the blog index. */
@@ -107,6 +107,10 @@ export async function markdownToHTML(
 	markdown: string,
 	terms: Record<string, string> = {}
 ) {
+	// Belt and braces. getPost already strips these before calling in, but
+	// this is exported, so it cannot assume its input is clean.
+	markdown = stripAuthorComments(markdown);
+
 	const file = await unified()
 		.use(remarkParse)
 		.use(remarkGfm)
@@ -182,12 +186,17 @@ export const getPost = cache(async (slug: string): Promise<Post | null> => {
 	const { content, data } = matter(raw);
 	const metadata = normalize(data, slug);
 
+	// Stripped once, here, so the rendered HTML, the reading time and the
+	// contents rail are all derived from the same text. Doing it only in the
+	// renderer would have left a parked section inflating the reading estimate.
+	const body = stripAuthorComments(content);
+
 	return {
 		slug,
 		metadata,
-		source: await markdownToHTML(content, metadata.terms),
-		readingTime: Math.max(1, Math.ceil(readingTime(content).minutes)),
-		headings: extractHeadings(content),
+		source: await markdownToHTML(body, metadata.terms),
+		readingTime: Math.max(1, Math.ceil(readingTime(body).minutes)),
+		headings: extractHeadings(body),
 	};
 });
 
