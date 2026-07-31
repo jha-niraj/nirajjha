@@ -16,13 +16,17 @@ featured: true
 live: true
 ---
 
-Friday, late, and the last ticket in the column was an accessibility one. You could not tab to the rows in the orders table. They were `div`s with an `onClick`, which is the kind of thing that survives a year of code review because it looks fine and works with a mouse.
+Nearly every product has a page shaped like this one. A list of records, one row each, and clicking a row opens it. Ours was orders, about twenty to a screen. It had worked for a year.
 
-Thirty seconds of work. Swap them for links, push, go home.
+Then a ticket arrived from someone who works by keyboard rather than mouse. They could not reach the rows at all. Pressing Tab jumped from the search box straight to the footer, skipping every order on the page.
 
-Monday morning, support forwarded a complaint. The orders list had got slow. Not broken, just heavy, the way a page feels when it is quietly doing something it should not be.
+The cause was ordinary. The rows were `<div>`s, and a `div` is a plain box. The browser has no reason to think you can go anywhere by pressing one, so it does not stop there, and the click handler we had attached to make it navigate is invisible to a keyboard.
 
-The same three lines had made navigation faster and the list slower. Then I reached for the obvious fix and made it four times worse.
+So I swapped each row for a real link. Correct fix, about a minute of work.
+
+Clicking a row got faster, noticeably. The list page itself got slower: scrolling went from smooth to a stutter, and requests to that route roughly tripled.
+
+One change, two things moving in opposite directions. Then I reached for the obvious fix and made it four times worse.
 
 ## What a prefetch actually is
 

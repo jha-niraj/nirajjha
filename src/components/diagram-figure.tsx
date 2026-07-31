@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { Maximize2, Minus, Plus, Scan, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
 	TransformComponent,
 	TransformWrapper,
@@ -152,6 +153,16 @@ export function DiagramFigure({
 	className?: string;
 }) {
 	const [isFull, setIsFull] = useState(false);
+	/**
+	 * Where the pointer went down.
+	 *
+	 * Closing on a plain backdrop click is wrong here, because the diagram pans.
+	 * Press inside the diagram, drag, release over the backdrop, and the browser
+	 * fires `click` on the nearest common ancestor, which is the backdrop. The
+	 * overlay would shut every time you dragged past its edge. Both ends of the
+	 * gesture have to land on the backdrop for it to count as a dismissal.
+	 */
+	const pressedBackdrop = useRef(false);
 
 	// Escape closes, and the page behind must not scroll while it is open.
 	useEffect(() => {
@@ -199,38 +210,72 @@ export function DiagramFigure({
 				)}
 			</div>
 
-			<AnimatePresence>
-				{isFull && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.18 }}
-						className="fixed inset-0 z-[80] bg-background/95 backdrop-blur-sm"
-						role="dialog"
-						aria-modal="true"
-						aria-label="Diagram, full screen"
-					>
-						<motion.div
-							initial={{ opacity: 0, scale: 0.97 }}
-							animate={{ opacity: 1, scale: 1 }}
-							exit={{ opacity: 0, scale: 0.98 }}
-							transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-							className="diagram-frame diagram-frame-full absolute inset-3 sm:inset-6"
-						>
-							{/* Keyed so the wrapper mounts fresh at the overlay's size.
-							    Reusing the instance would leave it centred against the
-							    old, much smaller box. */}
-							<Canvas
-								key="full"
-								svg={svg}
-								isFull
-								onToggleFull={() => setIsFull(false)}
-							/>
-						</motion.div>
-					</motion.div>
+			{/*
+			  Portalled to <body>, and that is load-bearing rather than tidiness.
+
+			  `position: fixed` is positioned against the viewport only while no
+			  ancestor has a transform, filter or backdrop-filter. This figure is
+			  mounted deep inside the article, under framer-motion wrappers that
+			  animate transforms, so any one of them becomes the containing block
+			  and the overlay ends up trapped inside the article column: the site
+			  header and the dock stayed on top of it, and the frame itself landed
+			  off-screen inside a scroller. A portal leaves that subtree entirely.
+			*/}
+			{/* No mounted-state guard: this whole tree is created by
+			    `createRoot` from an effect, so it only ever exists on the client
+			    and `document` is always there. A useState/useEffect pair to
+			    discover that would be a render cycle spent proving something
+			    already true. */}
+			{typeof document !== "undefined" &&
+				createPortal(
+					<AnimatePresence>
+						{isFull && (
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.18 }}
+								// `diagram-overlay` carries the dark token scope, so the backdrop
+								// matches the panel instead of being page-light around a dark box.
+								className="diagram-overlay fixed inset-0 z-[100] flex overscroll-contain bg-background/95 p-3 backdrop-blur-sm sm:p-6"
+								role="dialog"
+								aria-modal="true"
+								aria-label="Diagram, full screen"
+								onPointerDown={(e) => {
+									pressedBackdrop.current = e.target === e.currentTarget;
+								}}
+								onClick={(e) => {
+									if (pressedBackdrop.current && e.target === e.currentTarget) {
+										setIsFull(false);
+									}
+									pressedBackdrop.current = false;
+								}}
+							>
+								<motion.div
+									initial={{ opacity: 0, scale: 0.97 }}
+									animate={{ opacity: 1, scale: 1 }}
+									exit={{ opacity: 0, scale: 0.98 }}
+									transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+									// flex-1 for width, stretch for height. Absolute insets
+									// left the height to resolve against `auto` and the
+									// viewport inside collapsed to nothing.
+									className="diagram-frame diagram-frame-full min-w-0 flex-1"
+								>
+									{/* Keyed so the wrapper mounts fresh at the overlay's
+									    size. Reusing the instance would leave it centred
+									    against the old, much smaller box. */}
+									<Canvas
+										key="full"
+										svg={svg}
+										isFull
+										onToggleFull={() => setIsFull(false)}
+									/>
+								</motion.div>
+							</motion.div>
+						)}
+					</AnimatePresence>,
+					document.body
 				)}
-			</AnimatePresence>
 		</TooltipProvider>
 	);
 }

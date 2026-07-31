@@ -2,7 +2,6 @@
 
 import { DiagramFigure } from "@/components/diagram-figure";
 import { createRoot, type Root } from "react-dom/client";
-import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 /**
@@ -21,14 +20,27 @@ import { useEffect, useRef } from "react";
  *   diagram is present. A post without one never downloads a byte of it.
  */
 
-/** Reads a resolved CSS custom property so mermaid can match the site theme. */
-function cssVar(name: string, fallback: string): string {
-	if (typeof window === "undefined") return fallback;
-	const value = getComputedStyle(document.documentElement)
-		.getPropertyValue(name)
-		.trim();
-	return value ? `hsl(${value})` : fallback;
-}
+/**
+ * Placeholder colours, and they are meant to be overridden.
+ *
+ * mermaid bakes its palette into a <style> block inside the SVG, which is why
+ * this used to re-render the whole diagram on every theme change. That coupled
+ * the diagram's colours to *when* JavaScript ran, and it was wrong in both
+ * directions: light values on a dark page, then dark values on a light one.
+ *
+ * The colours now come from CSS instead, in the "Diagram theming" block in
+ * globals.css, which keys off the same `.dark` class as the rest of the site.
+ * A theme flip is a repaint, not a re-render, so there is nothing left to race.
+ * These values only decide what a diagram looks like in the instant before that
+ * stylesheet applies. They are the dark tokens, matching the frame, so even that
+ * instant is correct.
+ */
+const PLACEHOLDER = {
+	foreground: "hsl(0 0% 96%)",
+	background: "hsl(0 0% 4%)",
+	muted: "hsl(0 0% 12%)",
+	border: "hsl(0 0% 21%)",
+} as const;
 
 function wireYouTube(root: ParentNode): () => void {
 	const triggers = Array.from(
@@ -73,7 +85,6 @@ let diagramSeq = 0;
 
 async function renderMermaid(
 	root: ParentNode,
-	isDark: boolean,
 	roots: Map<Element, Root>,
 	isStale: () => boolean
 ) {
@@ -87,10 +98,7 @@ async function renderMermaid(
 	// mid-flight. Anything after an await has to re-check.
 	if (isStale()) return;
 
-	const foreground = cssVar("--foreground", isDark ? "#f5f5f5" : "#0f0f0f");
-	const background = cssVar("--background", isDark ? "#0a0a0a" : "#ffffff");
-	const muted = cssVar("--muted", isDark ? "#1f1f1f" : "#f5f5f5");
-	const border = cssVar("--border", isDark ? "#363636" : "#e3e3e3");
+	const { foreground, background, muted, border } = PLACEHOLDER;
 
 	// Every colour is pulled from the site's own tokens, which are all zero
 	// saturation. mermaid's stock palettes are heavily coloured and would be the
@@ -140,12 +148,23 @@ async function renderMermaid(
 	});
 
 	for (const host of hosts) {
-		const source = host.querySelector(".mermaid-source")?.textContent?.trim();
+		/*
+		 * The cached copy first, the DOM only as a fallback.
+		 *
+		 * This was the theme bug. The first render calls `host.replaceChildren()`,
+		 * which deletes the `.mermaid-source` element the source was read from. So
+		 * on every later run the query returned nothing, the `continue` below
+		 * fired, and the host was skipped: the diagram kept whatever colours it
+		 * was first drawn with. Load in light and switch to dark and you got a
+		 * white diagram with black labels on a black page; load in dark and switch
+		 * to light and you got the exact inverse. `dataset.source` was already
+		 * being written for precisely this, and then never read.
+		 */
+		const source =
+			host.dataset.source ??
+			host.querySelector(".mermaid-source")?.textContent?.trim();
 		if (!source) continue;
-
-		// Keep the source around. A re-render on theme change needs it, and by
-		// then the host's contents have been replaced by an SVG.
-		if (!host.dataset.source) host.dataset.source = source;
+		host.dataset.source = source;
 
 		try {
 			const { svg } = await mermaid.render(
@@ -186,8 +205,6 @@ async function renderMermaid(
 }
 
 export function PostEmbeds() {
-	const { resolvedTheme } = useTheme();
-
 	/**
 	 * One React root per diagram host, surviving theme changes.
 	 *
@@ -197,17 +214,23 @@ export function PostEmbeds() {
 	 */
 	const rootsRef = useRef<Map<Element, Root>>(new Map());
 
-	// Mount lifetime only. Tearing the roots down on every theme change was the
-	// bug: unmount is async, so the next render reached the host before the old
-	// root had let go of it.
+	// One pass, on mount. Diagrams are no longer re-rendered on theme change:
+	// their colours come from CSS now, so a flip is a repaint.
 	useEffect(() => {
 		const article = document.querySelector("article");
 		if (!article) return;
 
 		const unwire = wireYouTube(article);
 		const roots = rootsRef.current;
+		let stale = false;
+
+		void renderMermaid(article, roots, () => stale);
 
 		return () => {
+			// Marks the in-flight render stale rather than cancelling it, since the
+			// dynamic import and mermaid.render cannot be aborted. It just stops
+			// the result being applied after the article has gone.
+			stale = true;
 			unwire();
 			// Deferred: React refuses to unmount a root synchronously from inside
 			// the render cycle that owns it, and logs a warning if you try.
@@ -217,28 +240,6 @@ export function PostEmbeds() {
 			});
 		};
 	}, []);
-
-	// Diagrams are redrawn on theme change: the SVG bakes in its colours, so a
-	// light-mode diagram left alone would stay light on a dark page.
-	useEffect(() => {
-		const article = document.querySelector("article");
-		if (!article) return;
-
-		let stale = false;
-		void renderMermaid(
-			article,
-			resolvedTheme === "dark",
-			rootsRef.current,
-			() => stale
-		);
-
-		// Marks the in-flight render stale rather than cancelling it, since the
-		// dynamic import and mermaid.render cannot be aborted. It just stops the
-		// result being applied after something newer has started.
-		return () => {
-			stale = true;
-		};
-	}, [resolvedTheme]);
 
 	return null;
 }

@@ -26,6 +26,9 @@
 
 		--muted: 0 0% 96.1%;
 		--muted-foreground: 0 0% 30%;
+		/* Long-form body copy. Brighter than --muted-foreground because an
+		   article's prose is the content, not chrome around it. */
+		--prose-foreground: 0 0% 24%;
 
 		--accent: 0 0% 96.1%;
 		--accent-foreground: 0 0% 9%;
@@ -58,6 +61,7 @@
 
 		--muted: 0 0% 12%;
 		--muted-foreground: 0 0% 76%;
+		--prose-foreground: 0 0% 92%;
 
 		--accent: 0 0% 14%;
 		--accent-foreground: 0 0% 96%;
@@ -120,7 +124,8 @@
 		   in-between weight is real rather than a synthesised fake-bold. It
 		   reads noticeably more solid than 400 on dark backgrounds, where thin
 		   strokes are the first thing to disappear. */
-		@apply text-[17px] leading-[1.8] text-muted-foreground;
+		@apply text-[17px] leading-[1.8];
+		color: hsl(var(--prose-foreground));
 		font-weight: 420;
 	}
 
@@ -155,7 +160,8 @@
 	}
 
 	.prose blockquote {
-		@apply border-l-2 border-border pl-5 font-normal not-italic text-muted-foreground;
+		@apply border-l-2 border-border pl-5 font-normal not-italic;
+		color: hsl(var(--prose-foreground));
 	}
 
 	.prose blockquote p::before,
@@ -414,7 +420,12 @@ code[data-line-numbers-max-digits="3"] > [data-line]::before {
 
 /* Full screen sizes itself from the overlay's inset, not the article clamp. */
 .diagram-frame-full {
+	/* Height comes from the overlay's flex stretch, not from the article's
+	   clamp(). `auto` here left the viewport inside with no height to take a
+	   percentage of, so the whole canvas collapsed and full screen came up
+	   empty apart from the backdrop. */
 	height: auto;
+	align-self: stretch;
 	background-color: hsl(var(--background));
 }
 
@@ -1582,4 +1593,164 @@ html[data-theme-transition] .theme-vt-glass {
 	.stat-joiner {
 		opacity: 0.6;
 	}
+}
+
+/* ---------------------------------------------------------------------------
+   Diagrams are always dark
+
+   The frame redefines the palette tokens for its own subtree, so the canvas,
+   the dot grid, the zoom controls and every mermaid override below resolve to
+   dark values in both themes. Nothing else had to change: they all already
+   read `hsl(var(--token))`.
+
+   This is the fix for a bug that kept coming back. mermaid bakes its palette
+   into a <style> block inside each SVG, so the diagram's colours were decided
+   once, in JavaScript, at whatever moment the render happened to run. Every
+   attempt to make that moment agree with the page theme was wrong in one
+   direction or the other. A diagram that is only ever one theme has no moment
+   to get wrong.
+
+   It also reads deliberately, the way a code block does: a panel you look into,
+   rather than part of the page you are reading.
+   --------------------------------------------------------------------------- */
+
+.diagram-frame,
+.diagram-overlay {
+	color-scheme: dark;
+
+	--background: 0 0% 4%;
+	--foreground: 0 0% 96%;
+	--card: 0 0% 6%;
+	--card-foreground: 0 0% 96%;
+	--muted: 0 0% 12%;
+	--muted-foreground: 0 0% 76%;
+	--border: 0 0% 21%;
+	--accent: 0 0% 14%;
+	--accent-foreground: 0 0% 96%;
+}
+
+/* ---------------------------------------------------------------------------
+   Diagram theming
+
+   mermaid writes its palette into a <style> block inside each SVG, scoped by
+   the diagram's id, so every rule it emits carries id specificity. Overriding
+   it from here needs !important; that is not a shortcut, it is the only way to
+   beat a selector we do not control.
+
+   Doing it in CSS rather than re-rendering is the point. The colours now follow
+   the same `.dark` class as the rest of the site, so switching theme repaints
+   the diagram instead of regenerating it, and there is no window where the
+   diagram's idea of the theme and the page's disagree.
+   --------------------------------------------------------------------------- */
+
+/* Shared: anything that carries text. */
+.diagram-svg svg text,
+/* `fill` is inherited but a child can override it, and mermaid sets it on the
+   tspan as well as the text. Without this the parent went dark and the label
+   inside kept mermaid's own colour. */
+.diagram-svg svg tspan,
+.diagram-svg svg foreignObject div,
+.diagram-svg svg foreignObject span,
+.diagram-svg svg .nodeLabel,
+.diagram-svg svg .edgeLabel,
+.diagram-svg svg .label {
+	fill: hsl(var(--foreground)) !important;
+	color: hsl(var(--foreground)) !important;
+}
+
+/* Flowcharts. */
+.diagram-svg svg .node rect,
+.diagram-svg svg .node circle,
+.diagram-svg svg .node ellipse,
+.diagram-svg svg .node polygon,
+.diagram-svg svg .node path {
+	fill: hsl(var(--muted)) !important;
+	stroke: hsl(var(--border)) !important;
+}
+
+.diagram-svg svg .cluster rect {
+	fill: hsl(var(--background)) !important;
+	stroke: hsl(var(--border)) !important;
+}
+
+.diagram-svg svg .edgePath .path,
+.diagram-svg svg .flowchart-link,
+.diagram-svg svg line.messageLine0,
+.diagram-svg svg line.messageLine1,
+.diagram-svg svg .relationshipLine,
+.diagram-svg svg .er.relationshipLine {
+	stroke: hsl(var(--foreground)) !important;
+}
+
+/* Arrowheads live in <defs> and are filled, not stroked. */
+.diagram-svg svg .arrowheadPath,
+.diagram-svg svg marker path,
+.diagram-svg svg defs marker path {
+	fill: hsl(var(--foreground)) !important;
+	stroke: hsl(var(--foreground)) !important;
+}
+
+/* Edge labels sit on top of the line, so they need the page colour behind. */
+.diagram-svg svg .edgeLabel rect,
+.diagram-svg svg .edgeLabel foreignObject div,
+.diagram-svg svg .labelBkg {
+	background-color: hsl(var(--background)) !important;
+	fill: hsl(var(--background)) !important;
+}
+
+/* Sequence diagrams. */
+.diagram-svg svg .actor,
+.diagram-svg svg rect.actor {
+	fill: hsl(var(--muted)) !important;
+	stroke: hsl(var(--border)) !important;
+}
+
+.diagram-svg svg text.actor,
+.diagram-svg svg text.actor > tspan,
+.diagram-svg svg .messageText,
+.diagram-svg svg .labelText,
+.diagram-svg svg .labelText > tspan,
+.diagram-svg svg .loopText,
+.diagram-svg svg .loopText > tspan,
+.diagram-svg svg .noteText,
+.diagram-svg svg .noteText > tspan,
+.diagram-svg svg .sequenceNumber {
+	fill: hsl(var(--foreground)) !important;
+	stroke: none !important;
+}
+
+.diagram-svg svg .note,
+.diagram-svg svg .labelBox,
+.diagram-svg svg .activation0,
+.diagram-svg svg .activation1,
+.diagram-svg svg .activation2 {
+	fill: hsl(var(--muted)) !important;
+	stroke: hsl(var(--border)) !important;
+}
+
+.diagram-svg svg line.loopLine,
+.diagram-svg svg .actor-line {
+	stroke: hsl(var(--border)) !important;
+}
+
+/* Entity relationship diagrams. */
+.diagram-svg svg .er.entityBox {
+	fill: hsl(var(--muted)) !important;
+	stroke: hsl(var(--border)) !important;
+}
+
+.diagram-svg svg .er.attributeBoxOdd,
+.diagram-svg svg .er.attributeBoxEven {
+	fill: hsl(var(--background)) !important;
+	stroke: hsl(var(--border)) !important;
+}
+
+.diagram-svg svg .er.entityLabel,
+.diagram-svg svg .er.relationshipLabel {
+	fill: hsl(var(--foreground)) !important;
+}
+
+.diagram-svg svg .er.relationshipLabelBox {
+	fill: hsl(var(--background)) !important;
+	opacity: 1 !important;
 }

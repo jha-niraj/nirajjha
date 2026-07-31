@@ -152,9 +152,22 @@ letterforms drawn for 48px rather than a 16px master scaled up.
 
 ### Contrast
 
-Body copy uses `text-muted-foreground`, which is deliberately tuned to stay
-legible in both themes. Do not drop below it (no `text-muted-foreground/60` for
-anything a reader has to read). Decorative marks and separators may go lighter.
+Two levels of secondary text, and the split matters:
+
+| Token | Light | Dark | Used for |
+| --- | --- | --- | --- |
+| `--prose-foreground` | 24% | 88% | Article body and blockquotes |
+| `--muted-foreground` | 30% | 76% | UI chrome: labels, captions, nav, meta |
+
+Long-form prose is the content, not chrome around it, so it gets its own token
+and sits closer to `--foreground`. At 76% in dark mode the body sat far enough
+below the 96% used for headings, links and bold that every emphasised word made
+the plain text look grey by comparison. The ratios were never the problem: 76%
+on a 4% background is already 11:1. The gap was.
+
+Do not drop below `--muted-foreground` for anything a reader has to read (no
+`text-muted-foreground/60` for real text). Decorative marks and separators may
+go lighter.
 
 ### Layout
 
